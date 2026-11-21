@@ -2,6 +2,15 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+## Deeds count, and goals with something at stake (21 Nov 2026)
+
+*Extension only.*
+
+- Feelings: deeds weigh more than words. Words alone move a feeling one step at most, whatever the observer says. A deed that costs or risks something is a major step (2); a new pivotal step (4) is for a life-changing act: saving a life, a real sacrifice, a betrayal. One reply can move a feeling by up to 4 (was 2). A major or pivotal loss of trust lowers the stage.
+- Goals: the arc and the spine build the goal from the player character's own wants (survival, money, status, freedom, desire, revenge, pride, fear). Helping others can be part of it, but the goal also holds something the player character gains or keeps, at a cost; a purely selfless aim only when the card or the player shows that motive. At least one ending rewards putting themselves first.
+- Planner: each plan offers at least one opening toward the player character's own goal, so they drive the story instead of only serving others' needs.
+- The goal prompts no longer assume a male player character.
+
 ## Fixes from the group play-test (21 Nov 2026)
 
 *Extension only.*

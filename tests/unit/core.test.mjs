@@ -55,7 +55,11 @@ test('relationship movement is clamped per reply and a stage needs two kinds of 
     const rel = (category, quote, weight = 'major') => ({ who: 'Ji Si', toward: 'Rowan', axis: 'trust', dir: 'up', weight, category, quote });
     const v = validateObservation({ relationships: [rel('words', 'Ji Si thanks Rowan warmly'), rel('action', 'Ji Si shields Rowan from the blade')] },
         { text, names: ['Ji Si', 'Rowan'], player: 'Rowan' });
-    assert.equal(v.delta.relationships.length, 1, 'one axis moves at most two points per reply');
+    // Words count as minor whatever weight the observer gave (owner, 21 Nov 2026): 1 + 2 fits the cap of 4.
+    assert.deepEqual(v.delta.relationships.map(r => r.weight), ['minor', 'major']);
+    const over = validateObservation({ relationships: [rel('action', 'Ji Si shields Rowan from the blade', 'pivotal'), rel('words', 'Ji Si thanks Rowan warmly')] },
+        { text, names: ['Ji Si', 'Rowan'], player: 'Rowan' });
+    assert.equal(over.delta.relationships.length, 1, 'one axis moves at most four points per reply');
     assert.equal(c.stage, 'stranger');
     assert.equal(bandOf({ trust: 6, affection: 6 }), 'devoted');
 });

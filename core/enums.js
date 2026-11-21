@@ -4,7 +4,7 @@ export const AXES = ['trust', 'affection', 'desire', 'tension'];
 export const BANDS = ['hostile', 'wary', 'neutral', 'warm', 'devoted'];
 export const STAGES = ['stranger', 'acquaintance', 'familiar', 'close', 'bonded'];
 export const EVIDENCE = ['words', 'action', 'sacrifice', 'disclosure', 'shared_danger', 'time_together', 'betrayal', 'conflict'];
-export const WEIGHTS = { minor: 1, major: 2 };
+export const WEIGHTS = { minor: 1, major: 2, pivotal: 4 };
 export const SCORE_MIN = -10, SCORE_MAX = 10;
 
 export const STATS = ['strength', 'agility', 'endurance', 'intellect', 'perception', 'will', 'presence'];
@@ -33,7 +33,7 @@ export const TEMPO = ['slow', 'measured', 'brisk', 'relentless'];
 /** Per-pass caps: one reply cannot rewrite the world. */
 export const CAPS = {
     facts: 4, beliefs: 4, relationships: 6, stats: 3, statuses: 4, cast_changes: 4, threads: 3, lore: 3,
-    contradictions: 3, axisPerReply: 2, loreText: 600, loreKeys: 5, fact: 300, summary: 500,
+    contradictions: 3, axisPerReply: 4, loreText: 600, loreKeys: 5, fact: 300, summary: 500,
     beats: 6, scenes: 3, clues: 3, endings: 3, hooks: 3,
 };
 

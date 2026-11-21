@@ -388,7 +388,7 @@ export function applyDelta(state, obs, entry) {
                     c.stage = STAGES[at + 1];
                     c.stageEvidence = [];
                 }
-            } else if (r.axis === 'trust' && r.dir === 'down' && r.weight === 'major' && at > 0) {
+            } else if (r.axis === 'trust' && r.dir === 'down' && r.weight !== 'minor' && at > 0) {
                 c.stage = STAGES[at - 1];
                 c.stageEvidence = [];
             }

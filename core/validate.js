@@ -184,6 +184,7 @@ export function validateObservation(raw, ctx) {
     });
 
     const axisCount = {};
+    const PIVOTAL = ['action', 'sacrifice', 'shared_danger', 'betrayal'];
     each('relationships', CAPS.relationships, (it) => {
         const who = resolve(it.who);
         const toward = resolve(it.toward ?? ctx.player);
@@ -193,11 +194,15 @@ export function validateObservation(raw, ctx) {
         if (!(it.weight in WEIGHTS)) return 'unknown weight';
         if (!EVIDENCE.includes(it.category)) return 'unknown evidence category';
         if (!quoted(it.quote)) return 'quote not in the reply';
+        // Deeds weigh more than words (owner, 21 Nov 2026): words alone move a feeling one step at most, and a pivotal
+        // step needs a pivotal kind of deed.
+        let weight = it.category === 'words' ? 'minor' : it.weight;
+        if (weight === 'pivotal' && !PIVOTAL.includes(it.category)) weight = 'major';
         const k = `${who}>${toward}:${it.axis}`;
-        const step = WEIGHTS[it.weight];
+        const step = WEIGHTS[weight];
         if ((axisCount[k] ?? 0) + step > CAPS.axisPerReply) return 'axis already moved the maximum this reply';
         axisCount[k] = (axisCount[k] ?? 0) + step;
-        return { who, toward, axis: it.axis, dir: it.dir, weight: it.weight, category: it.category, quote: str(it.quote) };
+        return { who, toward, axis: it.axis, dir: it.dir, weight, category: it.category, quote: str(it.quote) };
     });
 
     const statSeen = new Set();

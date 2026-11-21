@@ -27,7 +27,7 @@ Rules:
 3. Things clearly narrated are certainty "stated". Things hinted, rumoured, lied about or seen from afar are "implied".
 4. Record changes, not the unchanged. Omit a section, or leave it empty, when nothing in it changed. Fewer, solid items beat many weak ones. Most replies change no relationship, no stat and no status.
 5. Use only the listed values where a field offers a list. Use character names exactly as given under Characters; a new character must first appear in cast_changes as "introduced". Introduce someone only when they have a proper name and take real part in the scene: they speak with or act toward the player character, or the story plainly turns on them. Passers-by are not characters: people known only by a role ("the cobbler", "a clothier", "the restaurant keeper"), crowds, and named people who are only glimpsed or mentioned. Do not introduce them or list them in "present"; what they do can still be a fact.
-6. Relationship changes are single small steps and need real evidence in the REPLY: a kind word is not trust. "toward" is the player character's name unless the REPLY is about two other characters. "stats" records a change in ability that outlasts the scene; anything that heals or passes (a wound, poison, exhaustion, fear) is a status. Stats move both ways, alongside the story. "small": hard training or practice shown in the REPLY, a lesson learned, a skill used well under pressure, or a decline from age, sickness or disuse. "large": a decisive change, such as a maiming or crippling injury, a lost limb or sense, a breakthrough, a power gained or lost, or long training completed across a time skip. One event may move several stats (a lost hand: strength and agility down).
+6. Relationship changes need real evidence in the REPLY, and deeds weigh more than words. Words alone (praise, thanks, a kind word, a promise not yet kept) are at most "minor", often nothing: a kind word is not trust. A deed that costs or risks something is "major": taking a risk for someone, giving something up, keeping a promise, protecting or standing up for them; the same for harm: lying to them, abandoning them, hurting them. "pivotal" is only for a life-changing act: saving a life, a real sacrifice, a betrayal. Each new deed counts again. "toward" is the player character's name unless the REPLY is about two other characters. "stats" records a change in ability that outlasts the scene; anything that heals or passes (a wound, poison, exhaustion, fear) is a status. Stats move both ways, alongside the story. "small": hard training or practice shown in the REPLY, a lesson learned, a skill used well under pressure, or a decline from age, sickness or disuse. "large": a decisive change, such as a maiming or crippling injury, a lost limb or sense, a breakthrough, a power gained or lost, or long training completed across a time skip. One event may move several stats (a lost hand: strength and agility down).
 7. Lore drafts are for things that will matter again: a named person, place, item, a decisive event, or a change to the world. One or two sentences, written as current fact. Never plans, intentions or beliefs.
 8. Presence: keep everyone listed under "Scene before the REPLY" unless the REPLY shows them leaving. Someone who leaves, or is left behind, goes in cast_changes as "departed" with a quote; silence is not departure.
 9. A contradiction is when the REPLY plainly conflicts with a line under Established facts, or with a character's recorded condition or abilities (a dead character speaking, a slower runner catching a faster one with no stated reason). Give a one-line "correction" the narrator can apply next turn. A correction overrides the story, so be certain: a character may have learned something off-stage, changed their mind or lied. When in doubt, leave the list empty.
@@ -45,7 +45,7 @@ Shape (all sections optional except summary):
   "facts": [{"fact": "", "quote": "", "certainty": "stated | implied", "kind": "${list(FACT_KINDS.map(([k]) => k))}", "witnesses": "present, or a list of the names who saw or heard it", "secret": false}],
   "confirmed": [{"id": "id of an Unconfirmed item the REPLY now makes certain", "quote": ""}],
   "beliefs": [{"who": "", "believes": "", "true": false, "quote": ""}],
-  "relationships": [{"who": "", "toward": "", "axis": "${list(AXES)}", "dir": "up | down", "weight": "minor | major", "category": "${list(EVIDENCE)}", "quote": ""}],
+  "relationships": [{"who": "", "toward": "", "axis": "${list(AXES)}", "dir": "up | down", "weight": "minor | major | pivotal", "category": "${list(EVIDENCE)}", "quote": ""}],
   "stats": [{"who": "", "stat": "${list(STATS)}", "dir": "up | down", "size": "small | large", "quote": ""}],
   "statuses": [{"who": "", "op": "add | treat | worsen | clear", "status": "injury, poison, exhaustion, fear ...", "severity": "${list(SEVERITY)}", "affects": "one stat or null", "quote": ""}],
   "threads": [{"op": "open | advance | resolve", "id": "advance and resolve only: a t- id from Open threads", "text": "", "quote": ""}],
@@ -274,11 +274,15 @@ One entry per person, each with the fields above. People only mentioned in their
     ];
 }
 
+/** Shared by the arc and the spine: goals are human, with something at stake for the player character (owner, 21 Nov 2026). */
+export const MOTIVE = `Motive: a person, not a saint. The goal comes from the player character's own wants: survival, money, status, freedom, desire, love, revenge, pride, fear. Helping someone may be part of it, as a means, a price or a want of their own, but the goal must also hold something the player character gains or keeps for themselves, and it costs or tempts them. A purely selfless aim (only to help, protect or save someone) only when the card or the player's own messages show that motive.`;
+
 // ---------------------------------------------------------------- planner
 
 export const PLAN_RULES = `Planning rules:
 - Plan possibilities, not a script. The plan is a ride the player may jump on or not. A beat is an opening the world offers, with a precondition ("if the player enters the city, the moneylender's men are watching the gate"), never an event that happens regardless of what the player does. Passing an opening by is a valid choice, never something to correct. Never decide the player character's actions, words or feelings.
 - The player's choices come first. If the story has moved away from the old plan, follow the story.
+- The player character drives the story, not only serves it. Besides other people's needs, each plan offers at least one opening toward the player character's own goal: a chance to gain, win or take something for themselves, at a price.
 - Characters marked "main cast" are the story's core, chosen by the player. Keep them at the centre of the plan and give each a part in where the story goes; other characters take smaller roles.
 - Keep a short horizon: at most ${CAPS.scenes} scenes and ${CAPS.beats} beats. Mark a beat "required" only if the arc cannot work without it.
 - Vary beat types (${BEAT_TYPES.join(', ')}). After two pressure beats the next is anything but pressure.
@@ -411,7 +415,9 @@ export function arcPrompt({ state, loreKeys, memory = null, opening = '' }) {
             role: 'system',
             content: `You outline the arc of an interactive story for a director. The player decides what happens; you set up forces and possibilities.
 
-The goal is the player character's: what he is after. Where the player's opening move names an aim, build the goal on it, inside the setup's world and people. The player character's description says who he is, never what the story is about.
+The goal is the player character's: what they are after, pursued by their own effort. Where the player's opening move names an aim, build the goal on it, inside the setup's world and people. The player character's description says who he is, never what the story is about.
+
+${MOTIVE}
 
 ${JSON_ONLY}
 {
@@ -458,8 +464,9 @@ ${JSON_ONLY}
 
 export const SPINE_SYSTEM = `You draft the spine of an interactive story from its setup: the question the setup poses, its possible answers, and the milestones on the way. The player decides how the story goes; you set up what is worth reaching for.
 
-- The question is about the player character: what he is after, as one question ("Can the fallen prince take back what was stolen?"). The setup (cards, scenario, world notes) gives the world, the people and what stands in the way; the player's opening move says what the player character sets out to do. Where the opening move names an aim, the question is built on it, inside the setup's world. The player character's description says who he is, never what the story is about.
-- Endings: three or four genuinely different answers to it, like different ways to win a game: by force, through the court, through an alliance, or by turning away to a life of one's own. Different routes, not shades of one route. All of them stay open; none is chosen now. Each has a short "how" naming its route.
+- The question is about the player character: what they are after, as one question ("Can the fallen prince take back what was stolen?"). The setup (cards, scenario, world notes) gives the world, the people and what stands in the way; the player's opening move says what the player character sets out to do. Where the opening move names an aim, the question is built on it, inside the setup's world. The player character's description says who he is, never what the story is about.
+- ${MOTIVE}
+- Endings: three or four genuinely different answers to it, like different ways to win a game: by force, through the court, through an alliance, or by turning away to a life of one's own. Different routes, not shades of one route. At least one ending rewards the player character putting themselves first. All of them stay open; none is chosen now. Each has a short "how" naming its route.
 - Endings answer the question at the level of the whole story: where the people end up and what is won or lost. A mood or a way of being seen is not an ending.
 - Milestones: three to five turning points the story is likely to pass through on the way to any answer ("learns who ordered the killing", "gains a first true ally"). Each changes the player's situation or which answers are still possible. A moment inside one scene (a first meeting, a look, someone sitting down, a scar noticed) is never a milestone. One milestone may feed several endings.
 - The current scene is already in motion: milestone 1 starts after it, never inside it.
@@ -469,7 +476,7 @@ export const SPINE_SYSTEM = `You draft the spine of an interactive story from it
 - Each criterion has a "role": what it contributes to its ending or milestone, in a few words. A criterion with no real role in the story is left out; fewer, weightier criteria are better.
 - "lasting": true when a criterion names a lasting state between people (trust, loyalty, a debt, an alliance), otherwise false.
 - Good: {"text": "Elsa trusts him with the truth about her brother", "role": "she becomes his ally against the guild"}. Bad: "Elsa flinches when a merchant walks into the tavern" (a scripted moment) or "the lamp is the only light" (scenery with no role).
-- Criteria may be about the player character's situation (what he holds, knows, is owed), never his inner decisions or feelings.
+- Criteria may be about the player character's situation (what they hold, know, are owed), never their inner decisions or feelings.
 - Stay inside the setup's world, genre and tone. Name only people, places and groups the setup or the player's opening move names, spelled as they spell them. Never invent a name; where the setup names nobody, describe the role instead ("the harbour master", "the younger of the two women"). Never decide the player character's actions, words or feelings.`;
 
 /** Agendas, drafted with the spine (M1). Kept out of SPINE_SYSTEM, which the spine check shares. */
