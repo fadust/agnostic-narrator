@@ -92,6 +92,7 @@ export function validateObservation(raw, ctx) {
     }
     for (const k of Object.keys(raw)) if (!TOP_KEYS.includes(k)) reject('key', `unknown key "${k}"`, k);
 
+    const from = new Map(); // accepted item -> the raw item it came from
     /** Shared gate: required quote, cap, then the item's own checks. */
     const each = (key, cap, fn) => {
         const list = arr(raw[key]);
@@ -100,7 +101,7 @@ export function validateObservation(raw, ctx) {
             if (delta[key].length >= cap) { reject(key, 'over the per-reply cap', item); continue; }
             const out = fn(ownWords(item));
             if (typeof out === 'string') reject(key, out, item);
-            else if (out) { delta[key].push(out); accepted++; }
+            else if (out) { delta[key].push(out); from.set(out, item); accepted++; }
         }
     };
 
@@ -153,6 +154,13 @@ export function validateObservation(raw, ctx) {
         if (INITIATIVE.includes(s.initiative)) delta.scene.initiative = s.initiative;
     }
 
+    let factOrder = null;
+    // The cap keeps the weightiest facts, not the first ones listed (audit, 21 Nov 2026: a revelation was cut for minor events).
+    if (Array.isArray(raw.facts)) {
+        const score = (f) => (isObj(f) && (FACT_KIND_WEIGHT[f.kind] ?? f.weight) === 'major' ? 1 : 0);
+        factOrder = new Map(raw.facts.map((f, n) => [f, n]));
+        raw = { ...raw, facts: raw.facts.map((f, n) => [f, n]).sort((a, b) => score(b[0]) - score(a[0]) || a[1] - b[1]).map(([f]) => f) };
+    }
     each('facts', CAPS.facts, (it) => {
         const fact = str(it.fact, CAPS.fact);
         if (!fact) return 'empty fact';
@@ -172,6 +180,8 @@ export function validateObservation(raw, ctx) {
             weight, ...(kw ? { kind } : {}), witnesses, secret: it.secret === true,
         };
     });
+    // Kept in the order the reply told them.
+    if (factOrder) delta.facts.sort((a, b) => (factOrder.get(from.get(a)) ?? 0) - (factOrder.get(from.get(b)) ?? 0));
 
 
     each('confirmed', CAPS.facts, (it) => {

@@ -4,7 +4,7 @@
 // or fights the story's genre after the check is dropped (owner decision, 18 Nov 2026).
 
 import { rotate } from './planner.js';
-import { arr, isObj, nameKey, str } from './util.js';
+import { arr, clip, isObj, nameKey, str } from './util.js';
 
 /** Flags that need a rewrite. `script` and `genre` beats are dropped when no accepted rewrite clears them. */
 export const REWRITE_CODES = ['script', 'criterion', 'name', 'genre'];
@@ -296,8 +296,9 @@ export function applyPlanRewrites(plan, rewrites) {
     for (const r of arr(rewrites)) {
         const b = copy.beats[Number(String(r.id).slice(1)) - 1];
         if (!b) continue;
-        if (str(r.goal)) { b.goal = str(r.goal, CAP); b.intent = b.goal; }
-        if (str(r.pressure)) b.pressure = str(r.pressure, CAP);
+        // Clipped at a word, never mid-word: the narrator reads these (audit, 21 Nov 2026: "...with more blo").
+        if (str(r.goal)) { b.goal = clip(r.goal, CAP); b.intent = b.goal; }
+        if (str(r.pressure)) b.pressure = clip(r.pressure, CAP);
     }
     return copy;
 }
@@ -310,7 +311,7 @@ export function validatePlanRewrites(raw, flags, plan, ctx) {
     if (!isObj(raw)) return { ok: false, error: 'not an object' };
     const flagged = new Set(arr(flags).map(f => f.id));
     const seen = new Set();
-    const rewrites = arr(raw.rewrites).filter(isObj).map(r => ({ id: str(r.id, 10), goal: str(r.goal, CAP), pressure: str(r.pressure, CAP) }))
+    const rewrites = arr(raw.rewrites).filter(isObj).map(r => ({ id: str(r.id, 10), goal: clip(r.goal, CAP), pressure: clip(r.pressure, CAP) }))
         .filter(r => (r.goal || r.pressure) && flagged.has(r.id) && !seen.has(r.id) && seen.add(r.id))
         .filter(r => {
             const b = applyPlanRewrites(plan, [r]).beats[Number(r.id.slice(1)) - 1];

@@ -2,6 +2,19 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+## Calls that fail well (22 Nov 2026)
+
+*Extension only.* Phase 2 of docs/audit-2026-11-21.md.
+
+- Errors under streaming are read correctly. SillyTavern reports a failed streamed call only as "Got response status N", so the dropped-connection retry, the no-streaming fallback and the temperature fallback never fired. A 502/503/504 or "Failed to fetch" now counts as a dropped connection. A 4xx is asked once more without streaming, which carries the provider's own message.
+- Retry waits hold. A chat event no longer retries the observer or tracker before its 20/60/180-second wait is over, so a flaky connection gets its three spaced tries instead of burning them in two turns.
+- Tracker batches close at 20k characters of reply text as well as at the reply count. When the model spends its whole answer limit thinking, the next batch is half the size instead of the same input again.
+- "Threads running low" re-plans at most every 3 turns.
+- The facts cap keeps the weightiest facts (a revelation over a passing cart), still in the order the reply told them.
+- A short answer that is a whole spoken line counts as evidence (`Elizabeth: "...Yes."`); a stray short word still does not. "who", "whom" and "whose" swap like other pronouns.
+- Fact clean-up runs early only when there are enough facts it may remove; major facts held the count up and it re-fired every 2-3 turns.
+- Rewritten beats are cut at a word, never mid-word.
+
 ## Who is who, and settled that sticks (21 Nov 2026)
 
 *Extension only.* Found by an audit of a long group play-test (docs/audit-2026-11-21.md, Phase 1).

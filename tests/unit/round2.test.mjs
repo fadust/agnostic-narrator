@@ -101,9 +101,10 @@ test('an empty answer from the connection never uses up a reply\'s tries', async
     const { director, host } = makeHost(chat, { settings: { maxRetries: 2 } });
     const call = host.call;
     host.call = async (module, ...rest) => (module === 'observer' && empty-- > 0 ? '' : call(module, ...rest));
-    for (let i = 0; i < 3; i++) await director.kick();
+    for (let i = 0; i < 3; i++) { director.cool.observer = 0; await director.kick(); }
     clearTimeout(director.retryTimer);
     assert.equal(chat[1].extra.narrator.err, undefined, 'no failure recorded against the reply');
+    director.cool.observer = 0;
     await director.kick();
     clearTimeout(director.retryTimer);
     assert.ok(chat[1].extra.narrator.obs, 'read once the connection answers');

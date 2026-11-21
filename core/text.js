@@ -75,7 +75,7 @@ export function quoteMatches(quote, text, normalisedText = null) {
 
 // Pronouns and possessives a model may write in place of a name, or the other way round.
 const PRONOUNS = new Set(['he', 'she', 'they', 'him', 'her', 'them', 'his', 'hers', 'their', 'theirs', 'it', 'its',
-    'himself', 'herself', 'themselves', 'itself']);
+    'himself', 'herself', 'themselves', 'itself', 'who', 'whom', 'whose']);
 // A quote must be this many words long before a name/pronoun swap is forgiven, and at most this many swaps.
 const MIN_LENIENT_WORDS = 6;
 const MAX_SWAPS = 2;
@@ -118,13 +118,24 @@ export function matchQuote(quote, text, normalisedText = null) {
     return '';
 }
 
+/**
+ * A short answer counts when it is a whole spoken line: inside quotation marks, or the whole line after a speaker tag
+ * (audit, 21 Nov 2026: a character's pivotal "...Yes." was refused as too short to be evidence).
+ */
+function spokenLine(short, text) {
+    if (!short) return false;
+    const src = String(text ?? '');
+    for (const m of src.matchAll(/["“”]([^"“”\n]{1,40})["“”]|^[^\n:]{1,40}:\s*([^\n]{1,40})$/gmu)) if (normalise(m[1] ?? m[2]) === short) return true;
+    return false;
+}
+
 function exactMatch(quote, text, normalisedText) {
     const hay = normalisedText ?? normalise(text);
     const parts = String(quote ?? '').split(/\.{3,}|…|\[\.\.\.\]/).map(normalise).filter(Boolean);
     if (!parts.length) return false;
     const total = parts.reduce((n, p) => n + p.replace(/ /g, '').length, 0);
     const cjk = /[　-鿿가-힯]/.test(parts.join(''));
-    if (total < (cjk ? 3 : MIN_QUOTE) && parts.join(' ') !== hay) return false;
+    if (total < (cjk ? 3 : MIN_QUOTE) && parts.join(' ') !== hay && !spokenLine(parts.join(' '), text)) return false;
     const inOrder = (list) => {
         let from = 0;
         for (const p of list) {

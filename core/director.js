@@ -93,7 +93,11 @@ const MEMORY_MS = 5_000;
 // retries against a failing model burned ~160k prompt tokens). Past the last, an empty answer is an ordinary failure:
 // it counts against a reply's tries and waits for "Retry failed calls".
 const TRANSIENT_WAITS = [20_000, 60_000, 180_000];
-const DROPPED = /socket hang up|ECONNRESET|ETIMEDOUT|ECONNREFUSED|fetch failed|network error|terminated/i;
+// Reply text one tracker batch may carry: past it, the batch closes early (audit, 21 Nov 2026: batches reached 50k characters).
+const TRACK_CHARS = 20_000;
+// Under streaming SillyTavern reports only "Got response status N": a provider dropping the connection comes back as a
+// 502/503/504 from SillyTavern's server, a browser-side drop as "Failed to fetch" (audit, 21 Nov 2026).
+const DROPPED = /socket hang up|ECONNRESET|ETIMEDOUT|ECONNREFUSED|fetch failed|failed to fetch|networkerror|network error|load failed|terminated|response status (?:502|503|504|520|522|524)\b/i;
 
 export const DEFAULTS = {
     cadence: 0,          // planner: every N turns; 0 = event-driven only (the default since 18 Nov 2026)
@@ -149,6 +153,7 @@ export class Director {
         this.reread = new Set();
         /** Step name -> time before which it is not retried after a failure. */
         this.cool = {};
+        this.trackMax = null;
         /** Empty answers in a row, per module (backs off, then stops automatic retries). */
         this.emptyRun = {};
         /** Per-module running totals for this chat: { [module]: { calls, promptTokens, answerTokens } } (rough estimates). */
@@ -175,6 +180,7 @@ export class Director {
         this.again = false;
         this.reread.clear();
         this.cool = {};
+        this.trackMax = null;
         this.usage = {};
         this.forceTrack = false;
         clearTimeout(this.retryTimer);
@@ -328,6 +334,8 @@ export class Director {
         const observing = (async () => {
             // Every unread reply, oldest first, within the backfill window.
             for (let guard = 0; guard < 50; guard++) {
+                // A transient failure waits its turn: a chat event does not retry before it (audit, 21 Nov 2026).
+                if ((this.cool.observer ?? 0) > Date.now()) break;
                 const next = this.nextUnread();
                 if (!next || epoch !== this.epoch) break;
                 const done = await this.observe(next);
@@ -411,7 +419,7 @@ export class Director {
             return true;
         } catch (e) {
             if (!stillCurrent()) { this.again = true; return false; }
-            if (e?.transient) { this.fail('observer', e, entry.mid); this.retrySoon(e.run); return 'transient'; }
+            if (e?.transient) { this.cool.observer = Date.now() + this.transientWait(e.run); this.fail('observer', e, entry.mid); this.retrySoon(e.run); return 'transient'; }
             if (String(e?.message) !== 'superseded' && e?.name !== 'AbortError') {
                 // The previous state stands. Remember the failure so a broken reply is not retried forever.
                 rec.err = { hash: entry.hash, n: (rec.err?.hash === entry.hash ? rec.err.n : 0) + 1, error: String(e?.message ?? e) };
@@ -460,8 +468,17 @@ export class Director {
         const windowed = new Set(narr.slice(-Math.max(cfg.backfill, every)));
         const waiting = narr.filter(e => e.i > from && windowed.has(e) && !e.tracked && e.text && (force || e.committed));
         // A batch that has failed too often is passed over (one reply at a time), so it cannot hold back newer replies.
-        while (waiting.length && (force || waiting.length >= every)) {
-            const batch = waiting.slice(0, force ? 12 : every);
+        while (waiting.length && (force || waiting.length >= Math.min(every, this.trackMax ?? every) || waiting.reduce((n, e) => n + e.text.length, 0) > TRACK_CHARS)) {
+            // A batch is closed by size as well as count, and shrinks after the model ran out of thinking room.
+            const cap = Math.min(force ? 12 : every, this.trackMax ?? Infinity);
+            let size = 0, chars = 0;
+            while (size < Math.min(cap, waiting.length)) {
+                const n = waiting[size].text.length;
+                if (size > 0 && chars + n > TRACK_CHARS) break;
+                chars += n;
+                size++;
+            }
+            const batch = waiting.slice(0, size);
             const last = batch.at(-1).rec;
             const sig = hash(batch.map(e => e.hash).join('|'));
             if (force || !(last?.trackErr?.sig === sig && last.trackErr.n >= cfg.maxRetries)) return batch;
@@ -496,7 +513,10 @@ export class Director {
             return true;
         } catch (e) {
             if (!stillCurrent()) { this.again = true; return false; }
-            if (e?.transient) { this.fail('tracker', e, carrier.mid); this.retrySoon(e.run); return false; }
+            if (e?.transient) { this.cool.tracker = Date.now() + this.transientWait(e.run); this.fail('tracker', e, carrier.mid); this.retrySoon(e.run); return false; }
+            // Out of thinking room: the same input would fail the same way. Halve the batch (audit, 21 Nov 2026: four
+            // 40-50k-character batches burned ~110k reasoning tokens and two replies were never tracked).
+            if (/spent its whole answer limit/.test(String(e?.message))) this.trackMax = Math.max(1, Math.floor(batch.length / 2));
             if (String(e?.message) !== 'superseded' && e?.name !== 'AbortError') {
                 rec.trackErr = { sig, n: (rec.trackErr?.sig === sig ? rec.trackErr.n : 0) + 1, error: String(e?.message ?? e) };
                 this.cool.tracker = Date.now() + COOL_MS;
@@ -804,7 +824,11 @@ export class Director {
         const live = state.canon.filter(f => !f.retired);
         const timed = every > 0 && state.meta.turn - (state.meta.lastCleanTurn ?? 0) >= every && live.length >= 8;
         // Real growth, not one new fact: a clean-up that could not get below the limit would otherwise run every turn.
-        const early = above > 0 && live.length > above && live.length >= this.lastCleanLive() + Math.max(5, Math.round(above / 4));
+        // Only facts a clean-up may remove count toward running early: major facts are never deleted, so a count held up by
+        // them re-fired every 2-3 turns (audit, 21 Nov 2026).
+        const removable = live.filter(f => f.weight !== 'major').length;
+        const early = above > 0 && live.length > above && removable >= Math.max(5, Math.round(above / 4))
+            && live.length >= this.lastCleanLive() + Math.max(5, Math.round(above / 4));
         if (!force && !timed && !early) return false;
         if (live.length < 2) return false;
         const epoch = this.epoch;
@@ -846,6 +870,7 @@ export class Director {
         for (const m of this.host.chat()) { delete m.extra?.narrator?.err; delete m.extra?.narrator?.trackErr; }
         this.errors = [];
         this.cool = {};
+        this.trackMax = null;
         this.emptyRun = {};
         return this.kick();
     }

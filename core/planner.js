@@ -274,7 +274,8 @@ export function planTrigger(state, cfg = { cadence: 0 }) {
     const settledNow = (m.settledPending ?? []).filter(t => (state.settled ?? []).some(s => s.text === t));
     if (settledNow.length) return `settled by the player: ${settledNow.join('; ')}. Drop every opening that presses it, and plan something new`;
     // Threads running low: the last opening is in use and little is left open. Refill before the queue runs dry.
-    if (queued === 1 && awakeThreads(state).length < 2 && m.lastPlanTurn < m.turn) return 'threads running low: plan new openings from what is in play, tied to the cast and the spine';
+    // Held to the deviation gap (audit, 21 Nov 2026: a plan leaving one beat re-planned every turn).
+    if (queued === 1 && awakeThreads(state).length < 2 && m.turn - m.lastPlanTurn >= DEVIATION_GAP) return 'threads running low: plan new openings from what is in play, tied to the cast and the spine';
     // A dropped opening re-plans, but not sooner than DEVIATION_GAP turns after the last plan while openings remain:
     // the next pass-by is often the player still finishing what they chose.
     if (m.deviationTurn >= 0 && m.deviationTurn > m.lastPlanTurn && (queued <= 1 || m.turn - m.lastPlanTurn >= DEVIATION_GAP)) return 'deviation';

@@ -192,9 +192,14 @@ const host = {
                 try {
                     return await request(payload, opts);
                 } catch (e) {
-                    if (!/stream/i.test(`${e?.message} ${e?.cause?.message ?? ''}`)) throw e;
+                    // Under streaming a refusal arrives only as "Got response status 4xx", with the reason lost (audit,
+                    // 21 Nov 2026). Ask once without streaming: that answer carries the provider's own message, which the
+                    // temperature fallback reads. A profile that then works without streaming stays off it.
+                    const why = `${e?.message} ${e?.cause?.message ?? ''}`;
+                    if (!/stream|response status 4\d\d/i.test(why)) throw e;
+                    const r = await request(payload, { ...opts, stream: false });
                     noStream.add(profile);
-                    return request(payload, { ...opts, stream: false });
+                    return r;
                 }
             };
             // The director sets its own temperature, so it does not depend on how the profile's preset was saved.
