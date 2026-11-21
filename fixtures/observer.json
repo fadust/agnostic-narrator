@@ -1,0 +1,145 @@
+[
+  {
+    "id": "obs-basic",
+    "about": "Plain narration: facts, place and who is present are recorded with exact quotes.",
+    "input": {
+      "cast": ["Ji Si"],
+      "reply": "Rain drums on the tiles of the Houshan gatehouse as you step under the arch. Ji Si is already there, a sealed letter tucked into her sleeve. \"The guild closes its books at dusk,\" she says. \"After that, the debt is the magistrate's problem.\"",
+      "playerMessage": "I walk up to the gate."
+    },
+    "expect": [
+      { "has": "facts", "matching": "letter" },
+      { "path": "scene.location.value", "matching": "Houshan" },
+      { "path": "scene.present", "matching": "Ji Si" },
+      { "maxRejected": 1 }
+    ],
+    "forbid": []
+  },
+  {
+    "id": "obs-no-plan-contamination",
+    "about": "The notes asked for the debt to surface, but the reply never mentions it. Nothing about a debt may be recorded.",
+    "input": {
+      "cast": ["Ji Si"],
+      "beat": { "intent": "let the debt to the merchant guild surface", "clues": [{ "text": "a creditor's seal on the gate" }] },
+      "reply": "Ji Si pours two cups of tea and pushes one across the table. Outside, a cart rattles past. \"You look tired,\" she says, and leaves it at that.",
+      "playerMessage": "I sit down across from her."
+    },
+    "expect": [{ "path": "direction.beat", "matching": "untouched|advanced" }],
+    "forbid": [{ "has": "facts", "matching": "debt|guild|creditor|seal" }, { "path": "direction.clues_found", "matching": "c0" }]
+  },
+  {
+    "id": "obs-attempt-is-not-outcome",
+    "about": "The player declared a kill; the narration shows a miss. The attempt must not be recorded as fact.",
+    "input": {
+      "cast": ["Captain Hale"],
+      "reply": "Your blade whistles through the space where Captain Hale stood a heartbeat ago. He is already two paces back, sword half drawn, eyes flat. \"Try that again,\" he says, \"and I stop being polite.\"",
+      "playerMessage": "I stab Captain Hale through the heart and kill him."
+    },
+    "expect": [{ "has": "facts", "matching": "miss|dodg|step|back|avoid|evade|blade" }],
+    "forbid": [{ "has": "facts", "matching": "(Hale|captain) (is|was) (dead|killed|slain)|kills? (Captain )?Hale" }, { "has": "cast_changes", "matching": "dead" }]
+  },
+  {
+    "id": "obs-rumour-is-implied",
+    "about": "A rumour repeated by a character is not established fact.",
+    "input": {
+      "cast": ["Old Tam"],
+      "reply": "Old Tam leans on his pole and lowers his voice. \"They say the miller's been buying up wells from here to the river. They say a lot of things.\" He shrugs and pushes the ferry off the bank.",
+      "playerMessage": "I ask the ferryman what he has heard."
+    },
+    "expect": [{ "has": "facts", "matching": "miller", "where": { "certainty": "implied" } }],
+    "forbid": [{ "has": "facts", "matching": "miller", "where": { "certainty": "stated" } }]
+  },
+  {
+    "id": "obs-dead-character-speaks",
+    "about": "A character recorded as dead speaks. The checker must flag it with a correction.",
+    "input": {
+      "cast": ["Old Tam", "Mira"],
+      "dead": ["Old Tam"],
+      "canon": ["Old Tam drowned when the ferry capsized"],
+      "reply": "Mira sets the lantern down. From the doorway Old Tam clears his throat. \"You'll want the north road,\" he says, scratching his beard. \"South one's washed out.\"",
+      "playerMessage": "I ask which road to take."
+    },
+    "expect": [{ "has": "contradictions", "matching": "Tam" }],
+    "forbid": []
+  },
+  {
+    "id": "obs-small-kindness-small-step",
+    "about": "One kind word moves a relationship by at most one minor step.",
+    "input": {
+      "cast": ["Mira"],
+      "reply": "Mira takes the bucket from you without comment, then glances back. \"Thanks,\" she says, grudgingly, and goes inside.",
+      "playerMessage": "I carry the bucket up to her door."
+    },
+    "expect": [{ "count": ["relationships", 0, 1] }],
+    "forbid": [{ "has": "relationships", "matching": "major" }, { "has": "relationships", "matching": "\"axis\":\"(desire|affection)\"" }]
+  },
+  {
+    "id": "obs-new-character",
+    "about": "A named newcomer is introduced before anything else refers to them.",
+    "input": {
+      "cast": ["Mira"],
+      "reply": "The door bangs open. A broad man in a flour-dusted apron fills the frame. \"Garrick Holt,\" Mira says without warmth. \"The miller. Come to count what isn't his.\"",
+      "playerMessage": "I look up."
+    },
+    "expect": [{ "has": "cast_changes", "matching": "Garrick" }, { "path": "scene.present", "matching": "Garrick" }],
+    "forbid": []
+  },
+  {
+    "id": "obs-injury-status",
+    "about": "An injury becomes a status with a sensible severity.",
+    "input": {
+      "cast": ["Ji Si"],
+      "reply": "The arrow takes Ji Si high in the left arm. She hisses, snaps the shaft, and keeps the bow up one-handed, blood running to her wrist.",
+      "playerMessage": "I shout a warning."
+    },
+    "expect": [{ "has": "statuses", "matching": "\"op\":\"add\"" }, { "has": "statuses", "matching": "arm|arrow|wound" }],
+    "forbid": [{ "has": "cast_changes", "matching": "dead" }]
+  },
+  {
+    "id": "obs-respects-retcon",
+    "about": "A retconned event that still echoes in the reply is not recorded again.",
+    "input": {
+      "cast": ["Mira"],
+      "tombstones": ["Mira burned the ledger"],
+      "reply": "Mira stirs the ashes in the grate where she burned the ledger and says nothing for a long moment. Then she bars the door.",
+      "playerMessage": "I wait."
+    },
+    "expect": [{ "has": "facts", "matching": "bar|door" }],
+    "forbid": [{ "has": "facts", "matching": "burn(ed|t) the ledger" }, { "has": "lore", "matching": "ledger" }]
+  },
+  {
+    "id": "obs-private-knowledge",
+    "about": "Something said after a character leaves is not witnessed by them.",
+    "input": {
+      "cast": ["Mira", "Garrick Holt"],
+      "present": ["Mira", "Garrick Holt"],
+      "reply": "Garrick Holt stamps out and the door swings shut behind him. Only then does Mira lean close. \"The well isn't poisoned,\" she whispers. \"I salted it myself. He must never know.\"",
+      "playerMessage": "I watch him go."
+    },
+    "expect": [{ "has": "facts", "matching": "salt" }],
+    "forbid": [{ "has": "facts", "matching": "salt", "where": { "witnessesInclude": "Garrick Holt" } }]
+  },
+  {
+    "id": "obs-quiet-scene-restraint",
+    "about": "A quiet slice-of-life reply yields little: no invented threads, stakes or relationship swings.",
+    "input": {
+      "cast": ["Hana"],
+      "reply": "Hana slides the tray of melon bread into the display case and wipes her hands on her apron. The bell over the door rings once in the draught. \"Slow morning,\" she says, and puts the kettle on.",
+      "playerMessage": "I come in from the cold."
+    },
+    "expect": [{ "count": ["facts", 0, 3] }, { "count": ["threads", 0, 0] }, { "count": ["contradictions", 0, 0] }],
+    "forbid": [{ "has": "statuses", "matching": "." }, { "has": "relationships", "matching": "major" }]
+  },
+  {
+    "id": "obs-clue-shown",
+    "about": "The reply shows the offered clue and delivers the intent.",
+    "input": {
+      "cast": ["Mira"],
+      "beat": { "intent": "let the bitter taste of the well water be noticed", "clues": [{ "text": "a grey film on the bucket" }] },
+      "reply": "You lift the bucket to your lips. The water is bitter enough to make you cough, and when you tip it out a grey film clings to the wood.",
+      "playerMessage": "I draw a bucket and drink."
+    },
+    "expect": [{ "path": "direction.beat", "matching": "complete|advanced" }, { "path": "direction.clues_found", "matching": "c0" }],
+    "forbid": []
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "name": "agnostic-narrator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Genre-agnostic SillyTavern narrator: one narrator card plus a director extension.",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test tests/unit/*.test.mjs",
+    "build": "node card/build.mjs && node tools/rules.mjs",
+    "fixtures": "node tools/fixtures.mjs",
+    "e2e": "node tests/e2e/run.mjs",
+    "docs": "node tools/rules.mjs"
+  }
+}

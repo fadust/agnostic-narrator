@@ -1,0 +1,105 @@
+// Round 5 (18 November 2026): the observer goes first in a profile's queue (W0), and a second check before "met" (W4).
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+import { Director } from '../../extension/core/director.js';
+import { trackCheckPrompt } from '../../extension/core/prompts.js';
+import { applyTrackCheck, aroundQuote, validateTrackCheck } from '../../extension/core/validate.js';
+import { NARRATOR } from './helpers.mjs';
+
+function hostWith(call, settings = {}) {
+    return {
+        chat: () => [], narrator: () => NARRATOR, setup: () => ({}), setSetup: () => { },
+        settings: () => ({ cadence: 0, ...settings }), save: () => { }, changed: () => { }, call,
+    };
+}
+
+test('an observer call goes ahead of queued background calls, never ahead of a running one', async () => {
+    const order = [];
+    let release;
+    const first = new Promise(r => { release = r; });
+    const d = new Director(hostWith(async (role, messages) => {
+        order.push(messages[0].content);
+        if (messages[0].content === 'planner-1') await first;
+        return 'ok';
+    }));
+    const p1 = d.model('planner', [{ content: 'planner-1' }]);
+    const p2 = d.model('tracker', [{ content: 'tracker-1' }]);
+    const p3 = d.model('planner', [{ content: 'planner-2' }]);
+    const o1 = d.model('observer', [{ content: 'observer-1' }]);
+    const o2 = d.model('observer', [{ content: 'observer-2' }]);
+    release();
+    await Promise.all([p1, p2, p3, o1, o2]);
+    assert.deepEqual(order, ['planner-1', 'observer-1', 'observer-2', 'tracker-1', 'planner-2']);
+});
+
+test('separate profiles do not wait for each other; a check call uses its parent role\'s profile and limit', async () => {
+    const seen = [];
+    const d = new Director(hostWith(async (role, messages, max) => { seen.push([role, max]); return 'ok'; }, { profiles: { tracker: 'cheap' }, tokens: { tracker: 600 } }));
+    await d.model('tracker-check', [{ content: 'x' }]);
+    assert.deepEqual(seen, [['tracker-check', 600]]);
+    assert.equal(d.usage['tracker-check'].calls, 1, 'logged apart from the tracker');
+    assert.ok(d.queues.has('cheap'));
+});
+
+const V = () => ({
+    delta: {
+        readings: [],
+        marks: [
+            { id: 'm1-c1', mark: 'met', quote: 'the bailiff makes the tally', exchange: 1 },
+            { id: 'm1-c2', mark: 'met', quote: 'Elizabeth asks him plainly', exchange: 1, speaker: 'Elizabeth' },
+            { id: 'e1-c1', mark: 'failed', quote: 'the house burns', exchange: 1, reason: 'the house is gone for good' },
+        ],
+        happened: [{ milestone: 'm1', quote: 'the bailiff makes the tally', exchange: 1 }],
+    },
+    rejected: [], accepted: 4,
+});
+
+test('the "met" check keeps confirmed marks, refuses rejected ones, and drops a "happened" left without a met criterion', () => {
+    const verdicts = validateTrackCheck({ verdicts: [
+        { id: 'm1-c1', verdict: 'reject', reason: 'a tally, not the forfeit satisfied' },
+        { id: 'm1-c2', verdict: 'reject' }, // no reason: ignored, the mark stands
+        { id: 'zz', verdict: 'reject', reason: 'unknown id' },
+    ] }, ['m1-c1', 'm1-c2']).value;
+    assert.deepEqual(Object.keys(verdicts), ['m1-c1']);
+    const out = applyTrackCheck(V(), verdicts, { m1: ['m1-c1', 'm1-c2'] });
+    assert.deepEqual(out.delta.marks.map(m => m.id), ['m1-c2', 'e1-c1']);
+    assert.equal(out.delta.happened.length, 1, 'm1-c2 is still met, so the turning point stands');
+    assert.equal(out.rejected[0].reason, 'check: a tally, not the forfeit satisfied');
+
+    const both = applyTrackCheck(V(), { 'm1-c1': { verdict: 'reject', reason: 'x' }, 'm1-c2': { verdict: 'reject', reason: 'y' } }, { m1: ['m1-c1', 'm1-c2'] });
+    assert.equal(both.delta.happened.length, 0);
+    assert.equal(both.accepted, 1);
+    assert.equal(both.delta.marks[0].mark, 'failed', 'failures are never checked');
+});
+
+test('checkMarks: no met mark, no call; a failed check keeps the marks', async () => {
+    const calls = [];
+    const state = { spine: { endings: [], milestones: [{ id: 'm1', title: 'T', status: 'open', criteria: [{ id: 'm1-c1', text: 'The forfeit is satisfied', mark: 'open' }, { id: 'm1-c2', text: 'Elizabeth has asked Max', mark: 'open' }] }] } };
+    const ids = { milestoneCriteria: { m1: ['m1-c1', 'm1-c2'] } };
+    const quiet = new Director(hostWith(async () => { calls.push(1); return '{}'; }));
+    const none = { delta: { readings: [], marks: [], happened: [] }, rejected: [], accepted: 0 };
+    assert.equal(await quiet.checkMarks(none, ['t'], state, ids), none);
+    assert.equal(calls.length, 0);
+
+    const broken = new Director(hostWith(async () => ''));
+    const v = V();
+    assert.equal(await broken.checkMarks(v, ['text'], state, ids), v, 'empty answer: marks stand as given');
+
+    const judge = new Director(hostWith(async (role, messages) => {
+        assert.equal(role, 'tracker-check');
+        assert.match(messages[1].content, /Criterion: The forfeit is satisfied/);
+        assert.match(messages[1].content, /Speaks or acts in the quote: Elizabeth/);
+        return JSON.stringify({ verdicts: [{ id: 'm1-c1', verdict: 'reject', reason: 'only a tally' }, { id: 'm1-c2', verdict: 'confirm' }] });
+    }));
+    const out = await judge.checkMarks(V(), ['Then the bailiff makes the tally and Elizabeth asks him plainly.'], state, ids);
+    assert.deepEqual(out.delta.marks.map(m => m.id), ['m1-c2', 'e1-c1']);
+});
+
+test('the check prompt carries only the marks, and the text around a quote', () => {
+    const text = 'One. Two three four. Elizabeth asks him plainly what he means. Five six.';
+    assert.match(aroundQuote(text, 'Elizabeth asks him plainly', 10), /four\. Elizabeth asks him plainly what he/);
+    assert.equal(aroundQuote(text, 'not there'), 'not there');
+    const [sys, user] = trackCheckPrompt({ items: [{ id: 'm1-c1', criterion: 'C', quote: 'Q', context: 'X Q Y' }] });
+    assert.match(sys.content, /someone other than the person the criterion names/);
+    assert.match(user.content, /## MARK m1-c1\nCriterion: C\nQuote: Q\nAround it: X Q Y\nSpeaks or acts in the quote: not known/);
+});

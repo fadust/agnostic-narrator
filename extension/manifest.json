@@ -1,0 +1,14 @@
+{
+    "display_name": "Narrator Director",
+    "loading_order": 50,
+    "requires": [],
+    "optional": [],
+    "js": "index.js",
+    "css": "style.css",
+    "author": "fadust",
+    "version": "0.1.0",
+    "homePage": "https://github.com/fadust/agnostic-narrator",
+    "auto_update": false,
+    "minimum_client_version": "1.19.0",
+    "generate_interceptor": "narratorDirectorIntercept"
+}

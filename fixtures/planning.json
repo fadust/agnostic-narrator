@@ -1,0 +1,62 @@
+[
+  {
+    "id": "genre-fantasy-party",
+    "module": "genre",
+    "input": { "material": "[Character: Brannoch]\nA dwarven shield-bearer sworn to escort the party through the Ashen Pass.\n[Character: Lysa]\nAn elven hedge-mage who pays for every spell in memories.\n[Scenario]\nFour companions carry a dead king's crown north before the snows close the pass. Wolves, toll-wardens and an old oath stand in the way." },
+    "expect": [{ "path": "dominant", "matching": "fantasy|adventure" }],
+    "forbid": []
+  },
+  {
+    "id": "genre-slice-of-life",
+    "module": "genre",
+    "input": { "material": "[Character: Hana]\nRuns a tiny neighbourhood bakery; hums while she works; worries about the rent but not much.\n[Scenario]\nYou have just moved in upstairs. Mornings smell of bread. Nothing much happens here, and that is the point." },
+    "expect": [{ "path": "dominant", "matching": "slice of life" }, { "path": "lethality", "matching": "none|low" }, { "path": "tempo", "matching": "slow|measured" }],
+    "forbid": [{ "path": "lethality", "matching": "real|high" }]
+  },
+  {
+    "id": "genre-survival",
+    "module": "genre",
+    "input": { "material": "[Scenario]\nThe supply ship is nine days late. Twelve of you remain at the ice station with fuel for six. The radio is dead and the storm season has started.\n[World notes]\n- cold: exposure kills in under an hour without shelter\n- food: forty ration packs" },
+    "expect": [{ "path": "dominant", "matching": "survival" }, { "path": "lethality", "matching": "real|high" }],
+    "forbid": [{ "path": "lethality", "matching": "none" }]
+  },
+  {
+    "id": "plan-cozy-stays-cozy",
+    "module": "plan",
+    "about": "A low-stakes story gets small beats that still go somewhere, and no invented danger.",
+    "input": {
+      "genre": { "dominant": "slice of life", "register": "warm, unhurried", "tempo": "slow", "stakes": "small comforts and friendships", "lethality": "none", "promises": ["nothing terrible happens"], "avoid": ["violence", "villains"] },
+      "premise": "You have just moved in above a neighbourhood bakery.",
+      "arc": { "goal": "Become part of the street", "act": 1, "tension": "low", "payoff": { "name": "the street festival", "act": 3, "hooks": [] }, "endings": [{ "title": "Home" }, { "title": "Moving on, warmly" }] },
+      "cast": ["Hana"],
+      "reason": "queue empty"
+    },
+    "expect": [{ "count": ["beats", 2, 6] }, { "has": "beats", "matching": "\"precondition\":\"[^\"]+" }],
+    "forbid": [{ "has": "beats", "matching": "attack|kill|monster|kidnap|murder|blood|weapon" }, { "has": "beats", "matching": "the player (decides|chooses|feels|says)" }]
+  },
+  {
+    "id": "plan-follows-deviation",
+    "module": "plan",
+    "about": "The player left the city. The new plan follows them instead of dragging them back.",
+    "input": {
+      "genre": { "dominant": "fantasy", "tempo": "measured", "stakes": "a debt and a name", "lethality": "real" },
+      "premise": "A courier owes the merchant guild more than they can pay.",
+      "arc": { "goal": "Settle or escape the debt", "act": 1, "tension": "rising", "payoff": { "name": "the reckoning with the guild", "act": 3, "hooks": [] }, "endings": [{ "title": "Paid" }, { "title": "Free and hunted" }] },
+      "cast": ["Ji Si"],
+      "summaries": ["The player refused the guild's offer.", "The player left Houshan by the north road at night and is now in open country."],
+      "location": "the north road, a day out of Houshan",
+      "queued": ["confront the guild master in his counting house in Houshan"],
+      "reason": "deviation"
+    },
+    "expect": [{ "count": ["beats", 2, 6] }, { "has": "beats", "matching": "road|country|north|travel|camp|village|pursu|follow" }],
+    "forbid": [{ "has": "beats", "matching": "(forced|dragged|brought) back to Houshan" }]
+  },
+  {
+    "id": "profile-scale",
+    "module": "profile",
+    "about": "Scores stay on the scale: a village blacksmith is strong, not superhuman, and not a scholar.",
+    "input": { "name": "Dorn", "card": "Dorn is the village blacksmith, fifty years old, broad as a door, slow to speak and slower to anger. He has never left the valley and cannot read.", "genre": { "dominant": "fantasy", "lethality": "real" } },
+    "expect": [{ "range": ["stats.strength", 45, 70] }, { "range": ["stats.intellect", 15, 40] }, { "path": "temperament", "matching": "reserved|stern" }],
+    "forbid": [{ "range": ["stats.strength", 85, 200] }]
+  }
+]

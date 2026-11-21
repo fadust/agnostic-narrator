@@ -1,0 +1,94 @@
+// Leak stripping and quote matching. The same patterns ship as regex scripts on the card (card/build.mjs imports them).
+
+export const FALLBACK_NOTE = 'The director has no notes ready for this turn. Narrate from the chat as it stands.';
+
+/** Patterns for director text that must never stay in a saved reply. Source strings, so they can be reused as ST regex scripts. */
+export const LEAK_PATTERNS = [
+    { name: 'director notes block', source: '<director_notes>[\\s\\S]*?</director_notes>\\s*', flags: 'gi' },
+    { name: 'unclosed director notes', source: '<director_notes>[\\s\\S]*$', flags: 'gi' },
+    // Spaces after a stray tag go, the line break stays: "\s*" here used to glue the paragraphs either side together.
+    { name: 'stray closing tag', source: '</director_notes>[ \\t]*', flags: 'gi' },
+    { name: 'story context block', source: '<story_context>[\\s\\S]*?</story_context>\\s*', flags: 'gi' },
+    { name: 'unclosed story context', source: '<story_context>[\\s\\S]*$', flags: 'gi' },
+];
+
+export function stripDirector(text) {
+    let out = String(text ?? '');
+    for (const p of LEAK_PATTERNS) out = out.replace(new RegExp(p.source, p.flags), '');
+    return out.trim();
+}
+
+/**
+ * Remove other extensions' tags from a reply before the director reads it: each `<tag …>…</tag>` goes whole, content
+ * included, and so does any stray single `<tag>`, `</tag>` or `<tag/>`. Tag names are matched case-insensitively.
+ * The saved message is never changed; this is only what the director reads.
+ * @param {string} text
+ * @param {string[]} [tags]
+ */
+export function stripTags(text, tags) {
+    let out = String(text ?? '');
+    const names = (tags ?? []).map(t => String(t).trim()).filter(t => /^[\w:.-]+$/.test(t));
+    if (!names.length) return out;
+    for (const t of names) {
+        out = out.replace(new RegExp(`<${t}(?:\\s[^>]*)?>[\\s\\S]*?</${t}\\s*>`, 'gi'), '');
+        out = out.replace(new RegExp(`</?${t}(?:\\s[^>]*)?/?>`, 'gi'), '');
+    }
+    return out.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/** "bbs_start, bbs_end" -> ['bbs_start', 'bbs_end']. Angle brackets and slashes typed by the player are ignored. */
+export const parseTags = (s) => String(s ?? '').split(/[\s,;]+/).map(t => t.replace(/[<>/]/g, '').trim()).filter(Boolean);
+
+export const hasLeak =(text) => /<\/?(director_notes|story_context)>/i.test(String(text ?? ''));
+
+/**
+ * True when a name reads as a person's name rather than a role. "the cobbler", "a clothier" and "restaurant keeper"
+ * are roles. In scripts with capital letters a name has one; scripts without capitals (Chinese, Japanese) pass.
+ */
+export function looksLikeName(name) {
+    const n = String(name ?? '').trim();
+    if (!n) return false;
+    if (/^(the|a|an|some|another)\s/i.test(n)) return false;
+    return !(/\p{Ll}/u.test(n) && !/\p{Lu}/u.test(n));
+}
+
+/** Normalise for quote comparison: drop markup, unify punctuation away, collapse whitespace, lowercase. */
+export function normalise(text) {
+    return String(text ?? '')
+        .normalize('NFKC')
+        .replace(/<[^>]{0,80}>/g, ' ')
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, ' ')
+        .trim();
+}
+
+// Short enough to admit "He is dead.", long enough that a stray word is not evidence.
+const MIN_QUOTE = 5;
+
+/**
+ * True when `quote` is really in `text`. An ellipsis in the quote splits it into parts that must appear in order.
+ * A quote too short to be evidence is refused unless it is the whole text.
+ */
+export function quoteMatches(quote, text, normalisedText = null) {
+    const hay = normalisedText ?? normalise(text);
+    const parts = String(quote ?? '').split(/\.{3,}|…|\[\.\.\.\]/).map(normalise).filter(Boolean);
+    if (!parts.length) return false;
+    const total = parts.reduce((n, p) => n + p.replace(/ /g, '').length, 0);
+    const cjk = /[　-鿿가-힯]/.test(parts.join(''));
+    if (total < (cjk ? 3 : MIN_QUOTE) && parts.join(' ') !== hay) return false;
+    const inOrder = (list) => {
+        let from = 0;
+        for (const p of list) {
+            const at = hay.indexOf(p, from);
+            if (at === -1) return false;
+            from = at + p.length;
+        }
+        return true;
+    };
+    if (inOrder(parts)) return true;
+    // Speech is quoted without its tags: "'My father had a chest,' she says. 'Bond notes.'" comes back as "My father had
+    // a chest. Bond notes." Accept it when every sentence of the quote is in the text, in order. Each still has to be
+    // there word for word, so nothing paraphrased passes.
+    const sentences = String(quote ?? '').split(/\.{3,}|…|\[\.\.\.\]|[.!?;](?=\s|$)|,(?=\s)/).map(normalise).filter(p => p.replace(/ /g, '').length >= 3);
+    return sentences.length >= 2 && inOrder(sentences);
+}

@@ -1,0 +1,32 @@
+Narrator Director 0.1.0 (18 November 2026)
+For SillyTavern 1.19.0 or newer, Chat Completion.
+
+What is in this package
+  narrator-director/                 the extension
+  Narrator.png                       the Narrator companion card (picture with the card inside)
+  Narrator.card.json                 the same card as JSON, if you prefer importing that
+  Narrator Companion.preset.json     the Chat Completion preset the card is written for
+  Narrator Director.quickreplies.json  optional quick-reply buttons for the director's commands
+
+Install
+  1. Close SillyTavern.
+  2. Copy the folder narrator-director into
+       SillyTavern\public\scripts\extensions\third-party\
+     (replace the old folder if you have one).
+  3. Start SillyTavern.
+  4. Characters: import Narrator.png. If you already have a Narrator card with chats, you can instead
+     replace its Narrator.png in SillyTavern\data\default-user\characters\ so the chats stay attached.
+     When SillyTavern asks whether to allow the card's regex scripts, allow them.
+  5. AI Response Configuration: import Narrator Companion.preset.json, then select it.
+     If you re-import over an older copy, select the preset again so its new values apply
+     (the longest reply is now 10,000 tokens).
+  6. Optional: Quick Replies, import Narrator Director.quickreplies.json.
+  7. Extensions panel, Narrator Director: choose a connection profile for the director's own calls
+     (a cheaper model is fine). With BaiBai Book installed, set "Who keeps the story's memory" to
+     "Another extension".
+
+Use
+  Open a chat with the Narrator card (alone, or in a group with your character cards).
+  The director works in the background; open its inspector from the Extensions panel or with /director.
+
+Details: docs/playing.md and docs/reference.md in the project.

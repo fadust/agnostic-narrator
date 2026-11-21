@@ -1,0 +1,7 @@
+node_modules/
+*.log
+agnostic-narrator.zip
+dist/release/
+dist/*.zip
+# Local working notes (machine paths, test workflow)
+docs/handover.md
