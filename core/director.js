@@ -99,6 +99,14 @@ const TRACK_CHARS = 20_000;
 // 502/503/504 from SillyTavern's server, a browser-side drop as "Failed to fetch" (audit, 21 Nov 2026).
 const DROPPED = /socket hang up|ECONNRESET|ETIMEDOUT|ECONNREFUSED|fetch failed|failed to fetch|networkerror|network error|load failed|terminated|response status (?:502|503|504|520|522|524)\b/i;
 
+/** Refusals as stored on a message: kind and reason in full, the refused item cut to 200 characters (audit, 21 Nov 2026). */
+function slimRejected(list) {
+    return arr(list).map(r => {
+        const item = typeof r?.item === 'string' ? r.item : JSON.stringify(r?.item ?? '');
+        return { kind: r?.kind, reason: r?.reason, item: item.length > 200 ? `${item.slice(0, 200)}…` : r?.item };
+    });
+}
+
 export const DEFAULTS = {
     cadence: 0,          // planner: every N turns; 0 = event-driven only (the default since 18 Nov 2026)
     nudgeAfter: 3,       // a queued beat offered this many turns without being taken is nudged once; retired 2 turns later (5 if required); 0 = never nudge
@@ -413,7 +421,7 @@ export class Director {
                 clueIds: offered.clues, player: before.meta.player, playerMessage,
                 known: [playerMessage, ...before.canon.map(f => f.fact), ...before.uncertain.map(f => f.fact)].join('\n'),
             });
-            rec.obs = { hash: entry.hash, delta: v.delta, accepted: v.accepted, rejected: v.rejected, beat: offered.beat, at: Date.now(), strip: [...(this.host.narrator()?.strip ?? [])] };
+            rec.obs = { hash: entry.hash, delta: v.delta, accepted: v.accepted, rejected: slimRejected(v.rejected), beat: offered.beat, at: Date.now(), strip: [...(this.host.narrator()?.strip ?? [])] };
             delete rec.err;
             this.host.save();
             return true;
@@ -507,7 +515,7 @@ export class Director {
             const texts = batch.map(e => e.text);
             const v = await this.checkMarks(validateTracking(parsed.value, { texts, spine: ids, names: Object.keys(before.cast), player: before.meta.player, settledIds: arr(before.settled).map(s => s.id) }), texts, before, ids);
             if (!stillCurrent()) { this.again = true; return false; }
-            rec.track = { covers: batch.map(e => ({ mid: e.mid, hash: e.hash })), delta: v.delta, rejected: v.rejected, at: Date.now(), strip: [...(this.host.narrator()?.strip ?? [])] };
+            rec.track = { covers: batch.map(e => ({ mid: e.mid, hash: e.hash })), delta: v.delta, rejected: slimRejected(v.rejected), at: Date.now(), strip: [...(this.host.narrator()?.strip ?? [])] };
             delete rec.trackErr;
             this.host.save();
             return true;

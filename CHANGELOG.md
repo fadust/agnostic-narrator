@@ -2,6 +2,16 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+## Lighter prompts and records (22 Nov 2026)
+
+*Extension only.* Phase 3 of docs/audit-2026-11-21.md, the parts that need no design call.
+
+- The planner gets full lines only for the people in play: present, main cast, named in a queued opening, or holding wants. Everyone else is one list of names (dead ones marked).
+- A long player message reaches the observer as its head and tail, about 1,500 characters; settled quotes are still checked against the whole message.
+- The genre register describes voice (diction, humour, how graphic), never length: "long detailed sentences" was sent every turn and pushed replies longer.
+- Refusals stored on a message keep their kind and reason; the refused item is cut to 200 characters.
+- Replay caches the word sets behind fact similarity: about 4× faster on a 97-message chat (13.7 ms warm, from about 59 ms).
+
 ## Calls that fail well (22 Nov 2026)
 
 *Extension only.* Phase 2 of docs/audit-2026-11-21.md.

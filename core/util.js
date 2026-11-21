@@ -73,10 +73,23 @@ export function setPath(obj, path, value) {
     return true;
 }
 
+// Word sets for similarity, cached: replay compares every new fact with every fact on record, and building the sets was
+// 75% of replay time (audit, 21 Nov 2026). The sets are only read, never changed.
+const SIM_CACHE = new Map();
+function simTok(s) {
+    const k = String(s ?? '');
+    let v = SIM_CACHE.get(k);
+    if (!v) {
+        if (SIM_CACHE.size > 20000) SIM_CACHE.clear();
+        v = new Set(nameKey(k).replace(/[^\p{L}\p{N} ]/gu, ' ').split(' ').filter(w => w.length > 2));
+        SIM_CACHE.set(k, v);
+    }
+    return v;
+}
+
 /** Word-overlap similarity, used to keep retconned facts from coming back reworded. */
 export function similarity(a, b) {
-    const tok = (s) => new Set(nameKey(s).replace(/[^\p{L}\p{N} ]/gu, ' ').split(' ').filter(w => w.length > 2));
-    const A = tok(a), B = tok(b);
+    const A = simTok(a), B = simTok(b);
     if (!A.size || !B.size) return nameKey(a) === nameKey(b) ? 1 : 0;
     let inter = 0;
     for (const w of A) if (B.has(w)) inter++;

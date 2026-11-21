@@ -127,6 +127,13 @@ export function trackCheckPrompt({ items }) {
  * Observer slice: the reply, the scene before it, known characters, established facts, open threads,
  * and exactly the intent and clue the narrator was shown for this turn. Never the plan, never the spine (the tracker reads that).
  */
+/** Head and tail of a long text, with the middle cut (audit, 21 Nov 2026: 4.7k-character player posts went in whole). */
+function clipMiddle(text, max) {
+    const s = String(text ?? '');
+    if (s.length <= max) return s;
+    return `${s.slice(0, Math.round(max * 0.7)).trimEnd()} […] ${s.slice(-Math.round(max * 0.3)).trimStart()}`;
+}
+
 export function observerPrompt({ state, reply, playerMessage, offered }) {
     const player = state.meta.player;
     const chars = Object.entries(state.cast).map(([n, c]) => {
@@ -162,7 +169,7 @@ export function observerPrompt({ state, reply, playerMessage, offered }) {
         section('Open threads (the only ids "threads" may advance or resolve)', threads.length ? bullets(threads) : 'none: a thread can only be opened'),
         section('Things that did NOT happen (never record these)', state.tombstones.length ? bullets(state.tombstones.slice(-10).map(t => t.fact)) : ''),
         section('Notes the narrator was given (for "direction" only)', notes.length ? bullets(notes) : 'none'),
-        section('The player\'s message (context only, never a source of facts; a "settled" quote may come from it)', playerMessage || '(none)'),
+        section('The player\'s message (context only, never a source of facts; a "settled" quote may come from it)', clipMiddle(playerMessage, 1500) || '(none)'),
         ...(arr(state.settled).length ? [section('Settled (already recorded)', bullets(state.settled.map(s => s.text)))] : []),
         `## REPLY\n${reply}`,
     ].join('\n');
@@ -213,7 +220,7 @@ export function genrePrompt({ material }) {
 ${JSON_ONLY}
 {
   "dominant": "", "secondary": [],
-  "register": "the prose voice in one sentence: diction, sentence rhythm, humour, how graphic",
+  "register": "the prose voice in one sentence: diction, humour, how graphic. Never length or sentence length: the narrator's length rule decides that",
   "pov": "for example: second person, present tense",
   "priority": ["what to protect when goals conflict, most important first, e.g. character consistency, player agency, tension, comfort"],
   "stakes": "what can be lost in this story",
@@ -334,8 +341,15 @@ Story spine (when one is given):
  */
 function planContext(state, loreKeys, memory = null) {
     const g = state.genre ?? {};
-    const cast = Object.entries(state.cast).filter(([, c]) => !c.pc).map(([n, c]) =>
-        `${n}${c.main ? ' (main cast)' : ''}${c.dead ? ' (dead)' : ''}: ${bandOf(c.rel)} toward the player, ${c.stage}${c.profile ? `. ${c.profile}` : ''}`);
+    // Full lines only for the people in play: present, main cast, named in a queued opening, or holding an agenda. The
+    // rest are names (audit, 21 Nov 2026: every character, away and dead ones too, with full profile grew without end).
+    const queuedText = state.beats.filter(b => b.status === 'queued').map(b => `${b.goal ?? ''} ${b.intent ?? ''} ${b.pressure ?? ''}`).join(' ').toLowerCase();
+    const inPlay = (n, c) => !c.dead && (c.main || arr(state.scene?.present).includes(n) || queuedText.includes(n.toLowerCase()) || !!state.agendas?.[n]);
+    const npcs = Object.entries(state.cast).filter(([, c]) => !c.pc);
+    const cast = npcs.filter(([n, c]) => inPlay(n, c)).map(([n, c]) =>
+        `${n}${c.main ? ' (main cast)' : ''}: ${bandOf(c.rel)} toward the player, ${c.stage}${c.profile ? `. ${c.profile}` : ''}`);
+    const away = npcs.filter(([n, c]) => !inPlay(n, c)).map(([n, c]) => (c.dead ? `${n} (dead)` : n));
+    if (away.length) cast.push(`Also in the story, not in play now: ${away.join(', ')}`);
     const done = state.beats.filter(b => b.status !== 'queued').slice(-6).map(b => `${b.status}: ${b.goal || b.intent} [${b.type}]`);
     const queued = state.beats.filter(b => b.status === 'queued').map(b => `${b.goal || b.intent} [${b.type}${b.required ? ', required' : ''}]`);
     // Dormant threads (unseen for a while, not naming anyone here or this place) stay out of the planner's prompt.
