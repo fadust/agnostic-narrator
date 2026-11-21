@@ -171,7 +171,7 @@ Source: `card/src/preset.md`. The main prompt of `dist/Narrator Companion.preset
 >
 > - action: blows, falls and chases, with each movement of the body and its impact shown in sequence
 > - body movement in detail
-> - the placement or movement of two or more characters
+> - two or more characters moving against each other at once (a fight, a chase); a conversation is not this
 >
 > Spend the extra room on movement and consequence, never on description that does not move.
 >

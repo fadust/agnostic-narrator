@@ -2,6 +2,13 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+## A length rule the model reads last (22 Nov 2026)
+
+*Card and preset: re-import both.*
+
+- The card now has post-history instructions, read after the chat: about 500 tokens, up to 1,000 only for action shown blow by blow; a long player message does not need a longer reply; open differently from the last few replies. `{{original}}` keeps your preset's own post-history text. Before, the only length rule sat at the top of an 8k preset, and replies doubled to imitate long player posts.
+- The preset's length exception for "two or more characters" now covers only people moving against each other (a fight, a chase), never a conversation. It had relaxed the cap in every group scene.
+
 ## Lighter prompts and records (22 Nov 2026)
 
 *Extension only.* Phase 3 of docs/audit-2026-11-21.md, the parts that need no design call.

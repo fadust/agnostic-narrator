@@ -11,6 +11,7 @@ const root = join(here, '..');
 const dist = join(root, 'dist');
 mkdirSync(dist, { recursive: true });
 const read = (p) => readFileSync(join(here, p), 'utf8').trim();
+const POST_HISTORY = '{{original}}\n[Length: about 500 tokens. Up to 1,000 only for action shown blow by blow. A long player message does not need a longer reply. Open differently from your last few replies.]';
 
 const NAME = 'Narrator';
 const SOLO_OPENING = '*The page is blank, and the story is yours to open.*\n\nTell me where we begin: a place, a moment, something {{user}} is doing. Or simply act, and the world will answer.';
@@ -106,7 +107,9 @@ const card = {
         mes_example: '',
         creator_notes: 'A genre-agnostic narrator. Works alone as a plain narrator; with the Narrator Director extension it keeps canon, plans beats and adapts to the story material. Solo: put the cast in a lorebook or the scenario. Group: add this card and the cast, then run /director setup so only the narrator speaks. Personality, scenario and examples are empty on purpose: the voice comes from your story, not from this card.',
         system_prompt: '',
-        post_history_instructions: '',
+        // After the chat history, where the model reads it last (owner, 22 Nov 2026: the only length rule sat at the top of
+        // the preset and replies doubled to imitate long player posts). {{original}} keeps the preset's own post-history text.
+        post_history_instructions: POST_HISTORY,
         alternate_greetings: [],
         group_only_greetings: [GROUP_OPENING],
         tags: ['narrator', 'storyteller', 'game master'],
