@@ -45,7 +45,7 @@ ${craft.join('\n')}
 
 ## 3. Companion preset
 
-Source: \`card/src/preset.md\`. The main prompt of \`dist/Narrator Companion.preset.json\`. Text between \`{{if .nar_pg}}\`, \`{{else}}\` and \`{{/if}}\` is chosen by the story's rating: the first branch for PG, the second for mature. \`{{if !.nar_pg}}\` blocks are sent only for mature stories.
+Source: \`card/src/preset.md\`. The main prompt of the two companion presets, \`Narrator Companion (Mature)\` and \`Narrator Companion (PG)\`, built from this one source. At build time the \`{{if .nar_pg}}\` / \`{{else}}\` / \`{{/if}}\` branches are resolved: the PG preset keeps the first branch, the Mature preset the second; \`{{if !.nar_pg}}\` blocks are in the Mature preset only. In the PG preset the sections after 7 move up one.
 
 ${quote(read('card/src/preset.md'))}
 

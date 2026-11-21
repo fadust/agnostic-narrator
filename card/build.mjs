@@ -1,7 +1,7 @@
 // Builds the importable files in dist/ from the sources here and from the extension's own patterns,
 // so the card's regex scripts and the director's leak stripping can never drift apart.
 
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { LEAK_PATTERNS } from '../core/text.js';
@@ -138,11 +138,24 @@ writeFileSync(join(dist, 'Narrator.card.json'), JSON.stringify(card, null, 2));
 
 // ---------------------------------------------------------------- companion preset (chat completion)
 
-// The main prompt. Its content-stance sections are gated on the director's PG flag, so one preset serves both ratings.
+// The main prompt has one source with PG-gated sections. It is built into two presets, Mature and PG, with the gates
+// resolved, so the preset says plainly which rating it is (owner, 22 Nov 2026: one preset that switched itself confused).
 const PROSE = read('src/preset.md');
 
+/** The prose with every {{if .nar_pg}} / {{if !.nar_pg}} gate resolved for one rating. */
+function forRating(text, pg) {
+    const out = text
+        .replace(/\{\{if \.nar_pg\}\}([\s\S]*?)\{\{else\}\}([\s\S]*?)\{\{\/if\}\}/g, (_, a, b) => (pg ? a : b))
+        .replace(/\{\{if !\.nar_pg\}\}([\s\S]*?)\{\{\/if\}\}/g, (_, a) => (pg ? '' : a))
+        .replace(/\{\{if \.nar_pg\}\}([\s\S]*?)\{\{\/if\}\}/g, (_, a) => (pg ? a : ''));
+    if (/nar_pg/.test(out)) throw new Error('preset.md: an unresolved PG gate is left');
+    // PG has no section 7 (Adult Content): the sections after it move up one, and so do references to them.
+    return pg ? out.replace(/^## (\d+)\./gm, (m, n) => (Number(n) > 7 ? `## ${n - 1}.` : m)).replace(/\bsection 8\b/g, 'section 7') : out;
+}
+
+function buildPreset(pg) {
 const preset = JSON.parse(readFileSync(join(here, 'src/preset.base.json'), 'utf8'));
-preset.prompts = preset.prompts.map(p => (p.identifier === 'main' ? { ...p, content: PROSE } : p));
+preset.prompts = preset.prompts.map(p => (p.identifier === 'main' ? { ...p, content: forRating(PROSE, pg) } : p));
 preset.prompts.push({
     identifier: 'directorNotes',
     name: 'Director notes (optional manual placement)',
@@ -158,7 +171,11 @@ preset.prompts.push({
 // (in chat at depth 1; in the system prompt for Claude and Gemini). Enable it only to choose the spot yourself.
 for (const o of preset.prompt_order) o.order.push({ identifier: 'directorNotes', enabled: false });
 preset.squash_system_messages = false;
-writeFileSync(join(dist, 'Narrator Companion.preset.json'), JSON.stringify(preset, null, 2));
+return preset;
+}
+for (const [label, pg] of [['Mature', false], ['PG', true]]) writeFileSync(join(dist, `Narrator Companion (${label}).preset.json`), JSON.stringify(buildPreset(pg), null, 2));
+// The single switching preset of 0.1-0.2.1 is gone; remove a stale copy so it is not shipped by mistake.
+rmSync(join(dist, 'Narrator Companion.preset.json'), { force: true });
 
 // ---------------------------------------------------------------- quick replies
 

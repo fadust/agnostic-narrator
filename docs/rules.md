@@ -75,7 +75,7 @@ Source: `card/build.mjs`. Each entry sits in the card's lorebook and is sent onl
 
 ## 3. Companion preset
 
-Source: `card/src/preset.md`. The main prompt of `dist/Narrator Companion.preset.json`. Text between `{{if .nar_pg}}`, `{{else}}` and `{{/if}}` is chosen by the story's rating: the first branch for PG, the second for mature. `{{if !.nar_pg}}` blocks are sent only for mature stories.
+Source: `card/src/preset.md`. The main prompt of the two companion presets, `Narrator Companion (Mature)` and `Narrator Companion (PG)`, built from this one source. At build time the `{{if .nar_pg}}` / `{{else}}` / `{{/if}}` branches are resolved: the PG preset keeps the first branch, the Mature preset the second; `{{if !.nar_pg}}` blocks are in the Mature preset only. In the PG preset the sections after 7 move up one.
 
 > **Priority.** This block sets the content stance and the prose for the story. Two things outrank it and are never overridden by it: the narrator card's Boundaries, and the card's rules about the player and the director notes. Within this block, precedence runs: the content stance → narrative integrity → characterization → response formatting. Lower rules yield, never the stance.
 >

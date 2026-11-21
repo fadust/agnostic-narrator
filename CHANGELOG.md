@@ -2,6 +2,16 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+# Unreleased
+
+## Two companion presets, Mature and PG (22 Nov 2026)
+
+*Preset and extension: import both presets.*
+
+- The companion preset now comes as two files built from one source: **Narrator Companion (Mature)** and **Narrator Companion (PG)**. Each says plainly which rating it is. The single preset that switched itself on the story's rating is gone, and the PG one is numbered 1 to 8 (it has no Adult Content section).
+- The director warns once per chat when the selected companion preset does not match the story's rating, and names the one to select. `/director pg` and `/director pg off` say which preset goes with the new rating.
+- The card's lorebook still follows the rating by itself, so only the preset needs choosing.
+
 # 0.2.1 (22 Nov 2026)
 
 *Extension, card and preset: re-import the card and the preset.* Everything below down to "0.2.0" is in this release.

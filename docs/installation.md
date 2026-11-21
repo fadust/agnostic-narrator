@@ -24,7 +24,7 @@ The card, preset and quick replies are not installed by the extension: download 
 
 ## 3. Import the companion preset
 
-1. In the chat-completion preset panel, import `dist/Narrator Companion.preset.json` and select it.
+1. In the chat-completion preset panel, import `dist/Narrator Companion (Mature).preset.json` and `dist/Narrator Companion (PG).preset.json`, and select the one for your story's rating. Mature is the default; a story you make PG with `/director pg` wants the PG preset, and the director says so if the wrong one is selected.
 2. Check the three values it sets:
 
    | Setting | Value | Change it when |
@@ -85,7 +85,7 @@ Most updates change the extension, and some change the card or preset. The chang
 | --- | --- |
 | Extension | Replace the `narrator-director` folder and reload |
 | Card | Re-import `dist/Narrator.card.json`, replacing the old card |
-| Preset | Re-import `dist/Narrator Companion.preset.json` and select it |
+| Preset | Import `Narrator Companion (Mature)` and `Narrator Companion (PG)` (they replace the single `Narrator Companion` preset of 0.2.1 and earlier) and select the one for the story's rating |
 
 Existing chats keep working. Records written by an older version are migrated when the chat is opened.
 

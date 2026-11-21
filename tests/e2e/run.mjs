@@ -118,11 +118,15 @@ const post = (url, body) => ev(async ({ url, body }) => {
 }, { url, body });
 const shot = async (name) => { if (shots) await page.screenshot({ path: join(shots, `${name}.png`) }); };
 
+/** The main prompt of one companion preset (Mature or PG). */
+const presetMain = (label) => JSON.parse(readFileSync(join(root, `dist/Narrator Companion (${label}).preset.json`), 'utf8')).prompts.find(p => p.identifier === 'main').content;
+const useMain = (content) => ev((main) => { SillyTavern.getContext().chatCompletionSettings.prompts.find(x => x.identifier === 'main').content = main; }, content);
+
 // ---------------------------------------------------------------- solo chat
 console.log('Solo chat');
 // Use the companion preset's main prompt, so its rating gates are tested in a real prompt.
 await ev((main) => { const p = SillyTavern.getContext().chatCompletionSettings.prompts.find(x => x.identifier === 'main'); p.content = main; },
-    JSON.parse(readFileSync(join(root, 'dist/Narrator Companion.preset.json'), 'utf8')).prompts.find(p => p.identifier === 'main').content);
+    presetMain('Mature'));
 await importCard(readFileSync(join(root, 'dist/Narrator.card.json'), 'utf8'), 'Narrator');
 await ev(() => {
     const c = SillyTavern.getContext();
@@ -389,13 +393,17 @@ await check('a branch rebuilds its own state from its own messages', async () =>
     assert(state.meta.turn === 2 && state.summaries.recent.length < full.summaries.recent.length && state.tombstones.length === 0 && state.scene.mood !== 'tense', `turn ${state.meta.turn}, ${state.tombstones.length} undone`);
 });
 
-await check('rating: mature by default (explicit on, lethality high); /director pg turns adult content off in lore and preset', async () => {
+await check('rating: mature by default; /director pg turns adult lore off and asks for the PG preset, which leaves adult content out', async () => {
     let vars = await ev(() => SillyTavern.getContext().chatMetadata.variables);
     assert(vars.nar_explicit === '1' && vars.nar_lethality_high === '1' && !vars.nar_pg, `defaults: ${JSON.stringify(vars)}`);
     let text = flat(lastPrompt());
     assert(text.includes('Explicit content is part of this story') && text.includes('everyone involved is an adult'), 'explicit entry missing by default');
     assert(text.includes('## 7. Adult Content') && text.includes('for an adult audience') && !text.includes('{{'), 'mature preset sections missing or unresolved');
     await slash('/director pg');
+    await sleep(300);
+    const warned = await ev(() => [...document.querySelectorAll('#toast-container .toast-warning')].map(t => t.textContent).join(' | '));
+    assert(/rated PG, but the Mature companion preset is selected/.test(warned), 'no preset warning: ' + warned);
+    await useMain(presetMain('PG'));
     await send('I sit by the fire.');
     text = flat(lastPrompt());
     vars = await ev(() => SillyTavern.getContext().chatMetadata.variables);
@@ -404,6 +412,7 @@ await check('rating: mature by default (explicit on, lethality high); /director 
     assert(!text.includes('## 7. Adult Content') && !text.includes('for an adult audience') && text.includes('up to the closed door'), 'preset did not switch to PG');
     assert(storyOf(lastPrompt()).includes('rating: PG'), 'story profile line missing');
     await slash('/director pg off');
+    await useMain(presetMain('Mature'));
     await send('I stand up.');
     text = flat(lastPrompt());
     assert(text.includes('## 7. Adult Content') && text.includes('Explicit content is part of this story'), 'mature rating did not come back');

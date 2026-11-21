@@ -221,7 +221,27 @@ function refresh(reason = '') {
         const changed = ref ? writeVars(vars, publicVars(director.view())) : clearVars(vars);
         if (changed) c.saveMetadataDebounced();
     }
+    if (ref) checkPresetRating();
     ui?.update(reason);
+}
+
+/**
+ * The companion preset comes as two files, Mature and PG (owner, 22 Nov 2026). When the selected one does not match the
+ * story's rating, say so once per chat and rating; another preset (neither marker) is left alone.
+ */
+let presetWarned = '';
+function checkPresetRating() {
+    const c = ctx();
+    if (c.mainApi !== 'openai') return;
+    const main = String((c.chatCompletionSettings?.prompts ?? []).find(p => p.identifier === 'main')?.content ?? '');
+    const kind = main.includes('## 7. Adult Content') ? 'Mature' : main.includes('slurs and graphic profanity are not') ? 'PG' : '';
+    if (!kind) return;
+    const pg = !!director.view().genre?.pg;
+    const want = pg ? 'PG' : 'Mature';
+    const key = `${c.getCurrentChatId?.() ?? ''}|${kind}|${want}`;
+    if (kind === want || presetWarned === key) return;
+    presetWarned = key;
+    toastr.warning(`This story is rated ${pg ? 'PG' : 'mature'}, but the ${kind} companion preset is selected. Select "Narrator Companion (${want})" in AI Response Configuration.`, 'Narrator Director', { timeOut: 15000 });
 }
 
 function presetHasMacro() {
@@ -751,7 +771,7 @@ async function directorCommand(_named, text) {
             const genre = director.view().genre;
             if (!genre) return 'The story profile is not ready yet.';
             await confirmGenre(applyRating(genre, off ? 'mature' : 'pg'));
-            return off ? 'Mature rating: explicit content on, lethality high.' : 'PG rating: adult content is off for this story.';
+            return off ? 'Mature rating: explicit content on, lethality high. Select the "Narrator Companion (Mature)" preset.' : 'PG rating: adult content is off for this story. Select the "Narrator Companion (PG)" preset.';
         }
         case 'explicit': {
             const on = !/^(off|no|false|0)$/i.test(rest.trim());
@@ -885,7 +905,7 @@ function registerCommand() {
 <li><code>/director beats: a rival appears; the storm breaks</code></li>
 <li><code>/director rewrite: less dialogue</code> – redo the latest reply as a new swipe</li>
 <li><code>/director retcon: the letter was burned</code></li>
-<li><code>/director pg</code> – rate this story PG: all adult content off (<code>/director pg off</code> returns to mature)</li>
+<li><code>/director pg</code> – rate this story PG: all adult content off (<code>/director pg off</code> returns to mature); pair it with the matching companion preset, PG or Mature</li>
 <li><code>/director explicit off</code> – keep the mature rating but fade to black on sex</li>
 <li><code>/director redraft</code> – a fresh arc, spine and plan from where the story stands, when the story feels stuck</li>
 <li><code>/director settle &lt;text&gt;</code> – close a matter so the story stops pressing it; <code>/director unsettle</code> lists and reopens</li>

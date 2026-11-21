@@ -17,7 +17,7 @@ Built and tested against SillyTavern 1.19.0. No other extension is required.
 
 1. In SillyTavern, open **Extensions → Install extension**, paste `https://github.com/fadust/agnostic-narrator` and install.
 2. Import `dist/Narrator.card.json` as a character and allow its regex scripts.
-3. Import `dist/Narrator Companion.preset.json` and select it.
+3. Import both presets, `dist/Narrator Companion (Mature).preset.json` and `dist/Narrator Companion (PG).preset.json`, and select the one that matches your story's rating (mature is the default; `/director pg` makes a story PG).
 4. Open a chat with the Narrator and say where the story begins.
 
 For a cast of character cards, make a group with the Narrator and run `/director setup`.
@@ -45,7 +45,7 @@ Full steps, including a separate model for the director: [docs/installation.md](
 | --- | --- | --- |
 | Director extension | repo root (`manifest.json`, `index.js`, `core/`, `st/`) | Record, memory, continuity, planning, notes, dynamic lore, inspector, `/director` |
 | Narrator card | `dist/Narrator.card.json` | Identity and rules, craft entries, regex scripts that strip leaked notes |
-| Companion preset | `dist/Narrator Companion.preset.json` | Content stance and prose craft; follows the story's rating |
+| Companion presets | `dist/Narrator Companion (Mature).preset.json`, `dist/Narrator Companion (PG).preset.json` | Content stance and prose craft, one file per rating; the director warns if the selected one does not match the story |
 | Quick replies | `dist/Narrator Director.quickreplies.json` | Buttons for common commands |
 | Fixture suite | `fixtures/`, `tools/fixtures.mjs` | Tests a director model before you rely on it |
 
