@@ -2,27 +2,53 @@
 
 A genre-agnostic narrator for SillyTavern, run by two models. A **narrator card** writes the story. A **director extension** keeps the record, plans ahead and gives the narrator one short note each turn. The chat shows only narration.
 
-Built and tested against SillyTavern 1.19.0. No other extension is required.
+Needs SillyTavern 1.19.0 or later, with its newer macro engine; the card and presets use `{{if}}` blocks. No other extension is required.
 
 ## What you get
 
-- **One narrator for any story.** She has no house style; genre, voice and pace come from your cards and lore.
+- **One narrator for any story.** The narrator has no house style: genre, voice and pace come from your cards and lore.
 - **A record that follows the chat.** Swipe, edit, delete or branch, and the director's state follows, because it is rebuilt from the chat's own messages.
 - **Facts with evidence.** A change is recorded only if the director can quote the narrator's reply for it.
-- **Planning without railroading.** The narrator sees one intent with a condition, never the plan, and your message always comes first.
-- **A content rating.** Mature by default; `/director pg` turns adult content off for a story.
+- **Planning without railroading.** The narrator sees one opening with a condition, never the plan, and your message always comes first.
+- **A story spine.** The question your setup poses, its possible endings and the milestones on the way. All endings stay open; the director tracks which way the story leans.
+- **Characters who remember what you did.** Feelings move with deeds, not words. Each character keeps wants of their own. A person known only by a role ("the hall master") becomes a character once they speak, and keeps the role as another name when their own name comes out.
+- **Your own character, profiled from your persona and your lorebook entry.** An S-class fighter written in lore is not treated as an ordinary person.
+- **Settled stays settled.** When you answer something for good, or have had enough of it, the director stops pressing it (`/director settle`). `/director redraft` rebuilds the arc and spine from where the story stands.
+- **A content rating.** Mature by default; `/director pg` makes a story PG. Two companion presets match the two ratings, and the director warns if the wrong one is selected.
+- **Failures you can see.** If a part of the director fails, you get a toast saying what failed and what to do. A dot appears on the Director menu entry, and a banner with Retry appears in the inspector. Another toast tells you when it works again.
 - **An inspector.** Seven plain tabs with forms: see and change the scene, the cast, the story profile, the plan and the record, and read what each director call was sent and answered.
 
 ## Quick start
 
-1. In SillyTavern, open **Extensions → Install extension**, paste `https://github.com/fadust/agnostic-narrator` and install.
-2. Import `dist/Narrator.card.json` as a character and allow its regex scripts.
-3. Import both presets, `dist/Narrator Companion (Mature).preset.json` and `dist/Narrator Companion (PG).preset.json`, and select the one that matches your story's rating (mature is the default; `/director pg` makes a story PG).
-4. Open a chat with the Narrator and say where the story begins.
+1. Install the extension in one of two ways:
+   - **Lean:** download the zip from the [latest release](https://github.com/fadust/agnostic-narrator/releases/latest) and put its `narrator-director` folder in `SillyTavern/public/scripts/extensions/third-party/`.
+   - **From the repository:** in **Extensions → Install extension**, paste `https://github.com/fadust/agnostic-narrator`. This also brings the tests and docs.
+2. Import `Narrator.card.json` as a character, and allow its regex scripts when asked.
+3. Import both companion presets, **Narrator Companion (Mature)** and **Narrator Companion (PG)**. Select the one that matches your story's rating; Mature is the default.
+4. Optional: import `Narrator Director.quickreplies.json` for buttons.
+5. Open a chat with the Narrator and say where the story begins.
 
 For a cast of character cards, make a group with the Narrator and run `/director setup`.
 
-Full steps, including a separate model for the director: [docs/installation.md](docs/installation.md).
+The director can use its own connection profile, a cheaper or faster model than the narrator's. Choose one in **Extensions → Narrator Director**. Without one, it shares the narrator's connection. Full steps: [docs/installation.md](docs/installation.md).
+
+## Talking to the director
+
+A few commands you will use most (all of them: [docs/reference.md](docs/reference.md)):
+
+| Command | What it does |
+| --- | --- |
+| `/director inspect` | Open the inspector |
+| `/director <words>` | A direction for the story, for example `/director a storm is coming` |
+| `/director settle <text>` | Close a matter for good: no one presses it again |
+| `/director redraft` | A fresh arc and spine from where the story stands |
+| `/director retcon <text>` | Undo a fact; refuses very short text and lists large matches first (add `!` to confirm) |
+| `/director pg` / `pg off` | PG or mature rating for this story |
+| `/director retry` | Try failed director calls again now |
+
+## Cost
+
+On a 47-turn test chat the director made about 2.3 calls per turn, or 4 to 5 on a turn that plans. The calls are spread over the observer, spine tracker, planner, profiles and clean-ups. A cheap model on the director's own profile keeps this low. The companion presets cap replies at 1,500 tokens; the target is about 500, and up to 1,000 for action.
 
 ## Documentation
 
@@ -33,27 +59,30 @@ Full steps, including a separate model for the director: [docs/installation.md](
 | [Reference](docs/reference.md) | Every command, setting, note line, variable and file |
 | [Active rules](docs/rules.md) | The exact rules each model is given. Generated from source |
 | [How it works](docs/how-it-works.md) | The design: records, replay, the turn, the notes, lore, planning |
+| [Director map](docs/director-map.md) | Modules, one pass step by step, what the narrator gets each turn |
 | [Troubleshooting](docs/troubleshooting.md) | Symptoms, causes and fixes |
 | [Development](docs/development.md) | Layout, tests, the fixture suite, changing rules |
 | [Integration notes](docs/integration-notes.md) | Working alongside other extensions: findings, and what is planned |
-| [Design review](docs/design-review.md) | How the build departs from the original plan, and why |
+| [Audits](docs/package-audit-2026-11-22.md) | The latest whole-package audit and what was fixed |
 | [Changelog](CHANGELOG.md) | What changed, newest first |
 
 ## What is in the box
 
 | Part | Path | Purpose |
 | --- | --- | --- |
-| Director extension | repo root (`manifest.json`, `index.js`, `core/`, `st/`) | Record, memory, continuity, planning, notes, dynamic lore, inspector, `/director` |
-| Narrator card | `dist/Narrator.card.json` | Identity and rules, craft entries, regex scripts that strip leaked notes |
-| Companion presets | `dist/Narrator Companion (Mature).preset.json`, `dist/Narrator Companion (PG).preset.json` | Content stance and prose craft, one file per rating; the director warns if the selected one does not match the story |
+| Director extension | repo root (`manifest.json`, `index.js`, `core/`, `st/`) | Record, memory, continuity, story spine, planning, notes, dynamic lore, inspector, `/director` |
+| Narrator card | `dist/Narrator.card.json` | Identity and rules, genre craft entries, regex scripts that strip leaked notes |
+| Companion presets | `dist/Narrator Companion (Mature).preset.json`, `dist/Narrator Companion (PG).preset.json` | Content stance and prose craft, one file per rating |
 | Quick replies | `dist/Narrator Director.quickreplies.json` | Buttons for common commands |
 | Fixture suite | `fixtures/`, `tools/fixtures.mjs` | Tests a director model before you rely on it |
 
 ## Status
 
-Version 0.2.2. 226 unit tests and 30 end-to-end checks pass. The end-to-end checks (`ST_DIR=<SillyTavern checkout> npm run e2e`, needs Playwright) run a real SillyTavern with a scripted stand-in for the models.
+Version 0.2.2. Tests:
+- **226 unit tests pass.**
+- **30 end-to-end checks pass.** They run a real SillyTavern with a scripted stand-in for the models: `ST_DIR=<SillyTavern folder> npm run e2e`, which needs Playwright.
 
-**No real model has been through the test suite yet.** Run the fixture suite on your director model before relying on it: [docs/development.md](docs/development.md#the-fixture-suite).
+The director has been play-tested in long live chats. Models differ a great deal in how well they follow its formats, so run the fixture suite on your director model before relying on it: [docs/development.md](docs/development.md#the-fixture-suite).
 
 ## Licence
 
