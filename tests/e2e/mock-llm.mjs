@@ -38,6 +38,23 @@ export function startMock(port = 8124) {
             };
             return { kind: 'observer', text: '```json\n' + JSON.stringify(out) + '\n```' };
         }
+        // Modules added after 0.1.0: spine, its check, the tracker and its check, plan check, fact clean-up, conclusions.
+        if (sys.includes('You draft the spine of an interactive story')) {
+            return { kind: 'spine', text: JSON.stringify({
+                question: 'Will the village learn who poisoned the well before it scatters?',
+                endings: [
+                    { title: 'The truth out', how: 'the poisoner is named in the square', criteria: [{ text: 'Mira trusts Rowan with what she saw at the well', role: 'she becomes a witness', lasting: true }] },
+                    { title: 'The village scatters', how: 'the families leave for the hills', criteria: [{ text: 'Old Tam has given up on the well', role: 'the last elder stops resisting' }] },
+                ],
+                milestones: [{ title: 'The water is tested', criteria: [{ text: 'someone has shown the well water is bitter', role: 'the poisoning becomes known' }] }],
+            }) };
+        }
+        if (sys.includes('You check a drafted story spine')) return { kind: 'spine-check', text: JSON.stringify({ rewrites: [] }) };
+        if (sys.includes('You track the spine of an interactive story')) return { kind: 'tracker', text: JSON.stringify({ readings: [], marks: [], happened: [] }) };
+        if (sys.includes('You check marks another reader made')) return { kind: 'tracker-check', text: JSON.stringify({ verdicts: [] }) };
+        if (sys.includes('You check beats a planner drafted')) return { kind: 'plan-check', text: JSON.stringify({ rewrites: [] }) };
+        if (sys.includes('You tidy the list of established facts')) return { kind: 'cleanup', text: JSON.stringify({ merges: [], retire: [] }) };
+        if (sys.includes('You write the conclusion of one milestone')) return { kind: 'conclusion', text: JSON.stringify({ conclusion: 'The water was tested and found bitter.' }) };
         if (sys.includes('describe what kind of story it wants to be')) {
             return { kind: 'genre', text: JSON.stringify({ dominant: 'Fantasy', secondary: ['adventure'], register: 'plain, concrete, a little wry', pov: 'second person, present tense', priority: ['player agency', 'character consistency'], stakes: 'the village and its people', lethality: 'real', tempo: 'measured', promises: ['wonder with a cost'], avoid: ['modern slang'], stats_focus: ['agility', 'will'] }) };
         }
@@ -78,6 +95,16 @@ export function startMock(port = 8124) {
             const out = respond(data.messages ?? []);
             log.push({ kind: out.kind, messages: data.messages, at: Date.now(), response: out.text, temperature: data.temperature });
             if (control.delayMs && out.kind !== 'narrator') await new Promise(r => setTimeout(r, control.delayMs));
+            // Director calls through a Connection Manager profile are streamed (since 21 Nov 2026): answer as server-sent events.
+            if (data.stream) {
+                res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' });
+                const chunk = (delta, finish = null) => `data: ${JSON.stringify({ id: 'x', object: 'chat.completion.chunk', model: 'mock', choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`;
+                res.write(chunk({ role: 'assistant', content: '' }));
+                for (let i = 0; i < out.text.length; i += 400) res.write(chunk({ content: out.text.slice(i, i + 400) }));
+                res.write(chunk({}, 'stop'));
+                res.end('data: [DONE]\n\n');
+                return;
+            }
             return send(200, { id: 'x', object: 'chat.completion', model: 'mock', choices: [{ index: 0, finish_reason: 'stop', message: { role: 'assistant', content: out.text } }], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 } });
         }
         send(404, { error: 'not found' });

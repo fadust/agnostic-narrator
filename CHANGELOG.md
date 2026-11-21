@@ -2,6 +2,16 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+## End-to-end checks back to green (22 Nov 2026)
+
+*Tests only.* All 29 checks pass against a real SillyTavern (B's checkout, throwaway data root).
+
+- The stand-in model answers every module added since 0.1.0 (spine and its check, tracker and its check, plan check, fact clean-up, conclusions), and streams when asked: director calls through a connection profile are streamed. Unanswered, the spine call had been taken for the narrator's prompt.
+- The test chat gets a scenario: a solo chat with no premise waits for the player's first message before drafting the story profile (by design since 19 Nov).
+- The test context is 32k: the default 4k no longer fits the preset, card and notes, and SillyTavern dropped the chat history, notes included.
+- Other third-party extensions are switched off for the run; the one-time  migration marker is not counted as a setting without a control.
+- Seen, not changed: the card's  logs a console error when the preset has no post-history prompt at all; the companion preset has an empty one, so it does not happen with it.
+
 ## The rest of the map audit (22 Nov 2026)
 
 *Extension only.* Findings A4-A10 of docs/director-map.md.

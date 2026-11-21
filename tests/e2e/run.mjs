@@ -47,7 +47,8 @@ server.kill(); await sleep(1000);
 const settingsPath = join(dataRoot, 'default-user/settings.json');
 const st = JSON.parse(readFileSync(settingsPath, 'utf8'));
 Object.assign(st, { firstRun: false, main_api: 'openai', username: 'Rowan' });
-Object.assign(st.oai_settings, { chat_completion_source: 'custom', custom_url: `http://127.0.0.1:${MOCK}/v1`, custom_model: 'mock', stream_openai: false });
+Object.assign(st.oai_settings, { chat_completion_source: 'custom', custom_url: `http://127.0.0.1:${MOCK}/v1`, custom_model: 'mock', stream_openai: false, openai_max_context: 32000 });
+// The default context (about 4k) no longer fits the preset, card and notes, and SillyTavern would drop the chat history.
 st.power_user.auto_connect = true;
 // Other third-party extensions in the checkout (modals, themes, input helpers) would get in the way: run with ours alone.
 const thirdParty = join(ST, 'public/scripts/extensions/third-party');
@@ -132,6 +133,14 @@ await ev(() => {
 await sleep(2000);
 // Decline SillyTavern's offer to import the embedded lorebook: the director must make it work unbound.
 for (let i = 0; i < 3; i++) { const no = page.locator('dialog[open] .popup-button-cancel').last(); if (await no.count()) await no.click().catch(() => { }); await sleep(500); }
+// A solo chat with no premise waits for the player's first message before drafting the story profile (since 19 Nov).
+// Give it the documented solo setup, a scenario, so the profile is drafted at chat start.
+await ev(async () => {
+    const c = SillyTavern.getContext();
+    c.chatMetadata.scenario = 'A fantasy village in a drought year. Someone has poisoned the old well at Greywell, and the courier Rowan has just arrived.';
+    await c.saveMetadata();
+    await window.narratorDirector.director.kick();
+});
 await idle();
 
 await check('the director is active only for the narrator card, and the neutral greeting is not read', async () => {
@@ -321,7 +330,9 @@ await check('inspector: every tab renders with nothing folded away, and forms on
         const keys = Object.keys(SillyTavern.getContext().extensionSettings.narrator_director);
         const html = set.innerHTML;
         const has = { enabled: '#nd-enabled', profile: '#nd-profile', profiles: '[data-nd-module]', setTemps: '#nd-temps', placement: '#nd-placement', rating: '#nd-rating', greetings: '#nd-greetings', mirrorLore: '#nd-mirror', tokens: '[data-nd-token]', memory: '#nd-memory', memoryProvider: '#nd-memory-provider', memoryMacro: '#nd-memory-macro', stripTags: '#nd-strip' };
-        const missing = keys.filter(k => !(has[k] ? set.querySelector(has[k]) : set.querySelector(`[data-nd-num="${k}"]`)));
+        // One-time migration markers are not settings (cadenceEvents: timed re-plans moved to off once, 18 Nov 2026).
+        const internal = new Set(['cadenceEvents']);
+        const missing = keys.filter(k => !internal.has(k)).filter(k => !(has[k] ? set.querySelector(has[k]) : set.querySelector(`[data-nd-num="${k}"]`)));
         return { missing, tooltips: set.querySelectorAll('[title]').length, hints: set.querySelectorAll('.nd-hint').length, folded: /<details/.test(html) };
     });
     assert(disclosed.missing.length === 0, `settings with no control: ${disclosed.missing}`);
