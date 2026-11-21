@@ -358,6 +358,24 @@ export class Director {
         return this.pass;
     }
 
+    /**
+     * Run a command's work (a spine redraft, an arc redraft, a roll-up, a genre re-run) inside the same single-flight as
+     * a pass, so it never overlaps a background call doing the same job (audit, 22 Nov 2026: a command could pay for a
+     * spine twice). It waits for a running pass, holds the slot while it runs, then lets a pass that was asked for meanwhile run.
+     */
+    async exclusive(fn) {
+        while (this.running) await this.pass;
+        this.running = true;
+        let out, err = null;
+        this.pass = (async () => {
+            try { out = await fn(); } catch (e) { err = e; } finally { this.running = false; }
+        })();
+        await this.pass;
+        if (this.again) { this.again = false; this.kick(); }
+        if (err) throw err;
+        return out;
+    }
+
     async work() {
         const epoch = this.epoch;
         if (!this.host.narrator()) return;
@@ -658,6 +676,8 @@ export class Director {
                 const value = await this.json('profile', profilePrompt({ name: card.name, card: card.text, genre: state.genre, isPlayer: false }), validateProfile);
                 delete value.people;
                 value.name = card.name;
+                // The reply that introduced them may have been swiped while the call ran (audit, 22 Nov 2026).
+                if (!this.view().cast[card.name]) continue;
                 wrote = this.logSetup(epoch, { kind: 'profile', by: 'setup', name: card.name, value, cardHash: card.hash, lore: true, aliases: card.aliases }) || wrote;
             } catch (e) {
                 this.cool.profile = Date.now() + COOL_MS;
@@ -673,6 +693,7 @@ export class Director {
                 const value = await this.json('profile', profilePrompt({ name: card.name, card: card.text, genre: state.genre, isPlayer: false, story: true }), validateProfile);
                 delete value.people;
                 value.name = card.name;
+                if (!this.view().cast[card.name]) continue; // swiped away while the call ran
                 wrote = this.logSetup(epoch, { kind: 'profile', by: 'setup', name: card.name, value, cardHash: card.hash, lore: true, story: true }) || wrote;
             } catch (e) {
                 this.cool.profile = Date.now() + COOL_MS;

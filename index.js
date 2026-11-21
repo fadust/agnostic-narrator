@@ -662,7 +662,7 @@ function editState(path, value) {
 }
 
 async function rerunGenre() {
-    await director.ensureGenre(true);
+    await director.exclusive(() => director.ensureGenre(true));
     host.save();
     refresh('genre');
 }
@@ -800,7 +800,7 @@ async function directorCommand(_named, text) {
         case 'profile': await rerunGenre(); return 'Story profile re-run.';
         case 'confirm': await confirmGenre(director.view().genre); return 'Story profile confirmed.';
         case 'replan': director.playerOp({ kind: 'instruction', text: rest || 're-plan from where the story stands', ...(rest ? {} : { quiet: true }) }); scheduleKick(50); return 'Re-planning.';
-        case 'rollup': await director.maybeRollUp(true); host.save(); refresh('rollup'); return 'Summaries rolled up.';
+        case 'rollup': await director.exclusive(() => director.maybeRollUp(true)); host.save(); refresh('rollup'); return 'Summaries rolled up.';
         case 'track': {
             if (!director.view().spine) return 'There is no spine yet. Use /director spine first.';
             await director.trackNow();
@@ -810,13 +810,13 @@ async function directorCommand(_named, text) {
         case 'spine': {
             const had = !!director.view().spine;
             if (!director.view().arc) return 'The spine is drafted after the arc. Accept the story profile or start playing first.';
-            const ok = await director.ensureSpine(true);
+            const ok = await director.exclusive(() => director.ensureSpine(true));
             host.save(); refresh('spine');
             return ok ? (had ? 'Spine redrafted from the setup.' : 'Spine drafted.') : 'No spine came back; see the Log tab.';
         }
         case 'redraft': {
             if (!director.view().genre) return 'The story profile is not ready yet.';
-            const ok = await director.redraftArc();
+            const ok = await director.exclusive(() => director.redraftArc());
             host.save(); refresh('spine');
             return ok ? 'Arc, spine and plan redrafted from where the story stands.' : 'No arc came back; see the Log tab.';
         }

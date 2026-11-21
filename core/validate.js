@@ -172,6 +172,7 @@ export function validateObservation(raw, ctx) {
         }
         if (!isBlank(s.mood)) delta.scene.mood = str(s.mood, 60);
         if (INITIATIVE.includes(s.initiative)) delta.scene.initiative = s.initiative;
+        if (s.cut === true) delta.scene.cut = true;
     }
 
     let factOrder = null;

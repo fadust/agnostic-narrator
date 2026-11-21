@@ -2,6 +2,14 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+## Commands in line, profiles after swipes, scene cuts (22 Nov 2026)
+
+*Extension only.* Findings A1-A3 of docs/director-map.md.
+
+- `/director spine`, `redraft`, `rollup` and the genre re-run wait their turn: they run in the same one-at-a-time slot as a background pass, so they never overlap a call doing the same job. A pass asked for meanwhile runs after.
+- A profile drawn from the story or a lorebook entry is not written when the person left the cast while the call ran (the reply that introduced them was swiped).
+- The observer can mark a scene cut (`"cut": true`): the REPLY ends in another place or with other people. The present list is then replaced, not added to, so people from the earlier scene stop being witnesses there.
+
 ## Replay cache (22 Nov 2026)
 
 *Extension only.*

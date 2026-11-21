@@ -108,6 +108,8 @@ Each turn costs about 2.3 director calls on average (measured on the 47-turn tes
 
 ## 5. Audit: still open
 
+A1-A3 fixed 22 Nov 2026 (see CHANGELOG). A2 has no automated test: it needs a swipe in the middle of a profile call.
+
 Ranked by impact. All are in shipped code (HEAD 9561991).
 
 | # | Area | Finding | Impact | Suggested fix |

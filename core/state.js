@@ -340,7 +340,9 @@ export function applyDelta(state, obs, entry) {
         // The observer's list adds people; it never removes them by omission. A model that lists only who spoke
         // must not make a silent character vanish. People leave by a quoted "departed" or "dead", or when the
         // scene moves to a different place, where the new list stands on its own.
-        const moved = !!s.location && placeBefore !== null && nameKey(s.location.value) !== placeBefore;
+        // A cut (the REPLY ends somewhere else or with other people) counts as a move even when no new place is quoted
+        // (audit, 22 Nov 2026: a cross-cut left the earlier scene's people present, and they became witnesses).
+        const moved = s.cut === true || (!!s.location && placeBefore !== null && nameKey(s.location.value) !== placeBefore);
         const merged = moved ? [...s.present] : [...state.scene.present, ...s.present];
         state.scene.present = [...new Set(merged)].filter(n => n !== player && !state.cast[n]?.dead && !gone.has(n));
         for (const n of state.scene.present) ensureCast(state, n);
