@@ -82,8 +82,9 @@ Each turn costs about 2.3 director calls on average (measured on the 47-turn tes
 
 | Module | Lines | Owns |
 |---|---|---|
-| `index.js` | 964 | The host: SillyTavern events, `host.call` (streaming, no-streaming and temperature fallbacks), cards and lore for profiles, prompt injection, `/director` commands, settings |
+| `index.js` | ~920 | The host: SillyTavern events, cards and lore for profiles, prompt injection, `/director` commands, settings |
 | `st/ui.js` | 877 | The panel: tabs for cast, plan, spine, facts and inspector, and editing (player ops) |
+| `st/call.js` | ~70 | The model call: streaming, the no-streaming and temperature fallbacks, thinking-out detection |
 | `st/providers.js` | 81 | Memory providers from other extensions (BaiBai and similar) |
 | `core/director.js` | 914 | `Director`: the pass, model queue and retries, observe and track, setup steps, replay cache, player ops |
 | `core/state.js` | 857 | `initialState`, `scan` / `reconcile`, `applyDelta` (observer), `applyOp` (every op kind), `replay`, `logOp`, settled, statuses, beat completion |
@@ -108,7 +109,7 @@ Each turn costs about 2.3 director calls on average (measured on the 47-turn tes
 
 ## 5. Audit: still open
 
-A1-A3 fixed 22 Nov 2026 (see CHANGELOG). A2 has no automated test: it needs a swipe in the middle of a profile call.
+A1-A10 fixed 22 Nov 2026 (see CHANGELOG), except: A8 split only the model call out of index.js (commands and setup steps stay where they are); A10 did not re-run the end-to-end checks (they need Playwright). A2 has no automated test: it needs a swipe in the middle of a profile call.
 
 Ranked by impact. All are in shipped code (HEAD 9561991).
 

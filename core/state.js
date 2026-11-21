@@ -349,6 +349,19 @@ export function applyDelta(state, obs, entry) {
     }
     if (s.mood) state.scene.mood = s.mood;
     if (s.initiative) state.scene.initiative = s.initiative;
+    // A death told only as a fact ("Rulf dies of his wounds") marks them dead too (audit map, 22 Nov 2026: a dead man
+    // stayed in play because no "dead" cast change came with it). The name must open the fact: "Max killed Rulf" is not Max's death.
+    for (const f of arr(d.facts)) {
+        if (f.certainty !== 'stated') continue;
+        for (const n of Object.keys(state.cast)) {
+            if (n === player || state.cast[n].dead || state.cast[n].pc) continue;
+            const esc = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            if (new RegExp(`^${esc}\\b[^.;]{0,30}?\\b(dies|died|is dead|was killed|has died|lies dead|is slain|was slain|breathes (his|her|their) last)\\b`, 'i').test(String(f.fact))) {
+                state.cast[n].dead = true;
+                state.scene.present = state.scene.present.filter(x => x !== n);
+            }
+        }
+    }
 
     arr(d.facts).forEach((f, n) => {
         if (state.tombstones.some(t => similarity(t.fact, f.fact) >= 0.7)) return;
@@ -845,6 +858,9 @@ export function statusIndex(statuses, name) {
     const hits = arr(statuses).map((x, i) => [i, telling(x.name)]).filter(([, ws]) => ws.some(w => mine.includes(w))).map(([i]) => i);
     return hits.length === 1 ? hits[0] : -1;
 }
+
+/** What the player settled: the matters that close plans, criteria and notes. Settled read from the story alone stays in the record. */
+export const playerSettled = (state) => arr(state.settled).filter(s => s.by === 'player');
 
 /** Record a settled matter once (a close rewording counts as the same), newest kept, capped. */
 function addSettled(state, { text, quote = '', by = 'story', source = '', turn = 0 }) {

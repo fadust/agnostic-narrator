@@ -7,7 +7,7 @@ import { memoryMode, plannerMemory } from './memory.js';
 import { applyRating, planTrigger, queuedBeatText, validateArc, validateConclusion, validateGenre, validatePlan, validateProfile, validateSpine, validateSpineRewrites } from './planner.js';
 import { arcPrompt, cleanupPrompt, conclusionPrompt, genrePrompt, observerPrompt, planPrompt, profilePrompt, spineCheckPrompt, spinePrompt, summariserPrompt, trackCheckPrompt, trackerPrompt } from './prompts.js';
 import { applySpineRewrites, emptySpine, findCriterion, flagSpine, needsConclusion, spineIds, spineTrigger } from './spine.js';
-import { castPeople, ensureCast, logOp, reconcile, replay, scan, visibleText } from './state.js';
+import { castPeople, ensureCast, logOp, playerSettled, reconcile, replay, scan, visibleText } from './state.js';
 import { aroundQuote, applyTrackCheck, validateCleanup, validateObservation, validateTrackCheck, validateTracking } from './validate.js';
 import { arr, hash, roughTokens, str } from './util.js';
 import { planCheckContext, reviewPlan, validatePlanRewrites } from './plancheck.js';
@@ -211,6 +211,7 @@ export class Director {
     sync() {
         // Each pass starts from the chat as it is now: an edit made in place, which the cache key cannot see, is picked up here.
         this.viewCache = null;
+        this.scanCache = null;
         const chat = this.host.chat();
         const r = reconcile(chat, this.host.narrator(), this.mids);
         this.mids = r.mids;
@@ -462,6 +463,7 @@ export class Director {
             const names = [...Object.keys(before.cast), before.meta.player].filter(Boolean);
             const v = validateObservation(parsed.value, {
                 text: entry.text, names, tombstones: before.tombstones, present: before.scene.present,
+                secondPerson: !before.genre?.pov || /second/i.test(before.genre.pov),
                 planned: queuedBeatText(before),
                 aliases: Object.fromEntries(Object.entries(before.cast).flatMap(([n, c]) => arr(c.aliases).map(a => [a, n]))),
                 uncertainIds: before.uncertain.map(u => u.id), threadIds: before.threads.map(t => t.id),
@@ -518,7 +520,10 @@ export class Director {
         const isSpineOp = (op) => op.kind === 'spine' || (op.kind === 'edit' && op.path === 'spine');
         const from = chat.findIndex(m => [...arr(m.narrator_ops), ...arr(m.extra?.narrator?.ops)].some(isSpineOp));
         if (from === -1 || (!force && (this.cool.tracker ?? 0) > Date.now())) return null;
-        const entries = scan(chat, this.host.narrator());
+        // Scanned once per chat revision: the tracking loop asks up to 20 times a pass (audit map, 22 Nov 2026).
+        const print = chatPrint(chat);
+        if (this.scanCache?.print !== print) this.scanCache = { print, entries: scan(chat, this.host.narrator()) };
+        const entries = this.scanCache.entries;
         const narr = entries.filter(e => e.kind === 'narration' && !e.hidden);
         const windowed = new Set(narr.slice(-Math.max(cfg.backfill, every)));
         const waiting = narr.filter(e => e.i > from && windowed.has(e) && !e.tracked && e.text && (force || e.committed));
@@ -560,8 +565,10 @@ export class Director {
             if (!parsed.ok) throw new Error(`tracker: ${parsed.error}`);
             const ids = spineIds(before);
             const texts = batch.map(e => e.text);
-            const v = await this.checkMarks(validateTracking(parsed.value, { texts, spine: ids, names: Object.keys(before.cast), player: before.meta.player, settledIds: arr(before.settled).map(s => s.id) }), texts, before, ids);
+            const v = await this.checkMarks(validateTracking(parsed.value, { texts, spine: ids, names: Object.keys(before.cast), player: before.meta.player, settledIds: playerSettled(before).map(s => s.id) }), texts, before, ids);
             if (!stillCurrent()) { this.again = true; return false; }
+            // A batch that fitted lets the next one grow back by a reply, up to the usual size (audit map, 22 Nov 2026).
+            if (this.trackMax) this.trackMax = this.trackMax + 1 >= (Number(this.cfg().trackEvery) || DEFAULTS.trackEvery) ? null : this.trackMax + 1;
             rec.track = { covers: batch.map(e => ({ mid: e.mid, hash: e.hash })), delta: v.delta, rejected: slimRejected(v.rejected), at: Date.now(), strip: [...(this.host.narrator()?.strip ?? [])] };
             delete rec.trackErr;
             this.host.save();
@@ -802,7 +809,7 @@ export class Director {
         const epoch = this.epoch;
         // Agendas (M1) ride in the same call, rooted in the same material; validated against the cast and the material.
         let agendas = [];
-        let value = await this.json('planner', spinePrompt({ material, genre: state.genre, premise: state.premise, arc: state.arc, player: state.meta.player, cast: spineCast(state), settled: arr(state.settled).map(s => s.text), story: force ? [state.summaries.rolled, ...state.summaries.recent.slice(-12).map(s => s.text)].filter(Boolean).join('\n') : '' }), (raw) => {
+        let value = await this.json('planner', spinePrompt({ material, genre: state.genre, premise: state.premise, arc: state.arc, player: state.meta.player, cast: spineCast(state), settled: playerSettled(state).map(s => s.text), story: force ? [state.summaries.rolled, ...state.summaries.recent.slice(-12).map(s => s.text)].filter(Boolean).join('\n') : '' }), (raw) => {
             const v = validateSpine(raw);
             if (v.ok) agendas = validateAgendas(raw.agendas, state, material);
             return v;

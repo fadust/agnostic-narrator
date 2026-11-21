@@ -41,7 +41,7 @@ test('no payment in the motive wording or the spine example', () => {
 
 test('settled reaches the tracker, the spine drafter and the planner\'s wants and criteria', () => {
     const s = arcState();
-    s.settled = [{ id: 'st-1', text: 'Max wants nothing in return for his help', turn: 3 }];
+    s.settled = [{ id: 'st-1', text: 'Max wants nothing in return for his help', turn: 3, by: 'player' }];
     s.spine = { question: 'q', endings: [{ id: 'e1', title: 'E', criteria: [{ id: 'e1-c1', text: 'Elizabeth owes Max a debt', mark: 'open' }] }], milestones: [], readings: [], turnedAway: [], scene: {} };
     const tr = trackerPrompt({ state: s, exchanges: [{ player: 'p', reply: 'r' }] })[1].content;
     assert.match(tr, /## Settled by the player[^\n]*"settled": its id[^\n]*\n- \[st-1\] Max wants nothing in return/);

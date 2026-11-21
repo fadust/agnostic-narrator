@@ -53,7 +53,9 @@ export function validateObservation(raw, ctx) {
         // "the hall master" and "Hall master" are one role character.
         const rk = nameKey(roleName(n));
         if (rk !== k && names.has(rk)) return names.get(rk);
-        if (ctx.player && PLAYER_ALIASES.test(k)) return ctx.player;
+        // "you" is the player character only when the story is told in the second person (audit map, 22 Nov 2026: a
+        // narrator speaking to the reader made "you" mean the reader).
+        if (ctx.player && PLAYER_ALIASES.test(k) && !(ctx.secondPerson === false && /^you$/.test(k))) return ctx.player;
         const hits = partial(k);
         return hits.length === 1 ? hits[0] : undefined;
     };

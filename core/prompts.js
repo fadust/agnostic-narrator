@@ -10,7 +10,7 @@ import { agendaLines } from './agenda.js';
 import { standouts, statusPhrase } from './social.js';
 import { READINGS, spineForObserver, spineForPlanner } from './spine.js';
 import { queuedBeatText } from './planner.js';
-import { awakeThreads, bandOf, factsInView } from './state.js';
+import { awakeThreads, bandOf, factsInView, playerSettled } from './state.js';
 import { arr } from './util.js';
 
 const JSON_ONLY = 'Reply with one JSON object and nothing else: no prose, no code fence, no commentary.';
@@ -96,7 +96,7 @@ export function trackerPrompt({ state, exchanges }) {
         sv?.endings.length ? section('Endings (one reading for each)', sv.endings.map(e => `- ${e.id}: ${e.title}`).join('\n')) : '',
         sv?.milestones.length ? section('Milestones in progress', sv.milestones.map(m => `- ${m.id}: ${m.title}`).join('\n')) : '',
         groups.length ? section('Open criteria (mark only those an exchange settles; most exchanges settle none)', groups.map(([title, it]) => `${title}:\n${crit(it)}`).join('\n')) : '',
-        arr(state.settled).length ? section('Settled by the player (closed: a criterion that needs one reopened can never be met; mark it failed with "settled": its id, no quote or reason needed)', bullets(state.settled.map(s => `[${s.id}] ${s.text}`))) : '',
+        playerSettled(state).length ? section('Settled by the player (closed: a criterion that needs one reopened can never be met; mark it failed with "settled": its id, no quote or reason needed)', bullets(playerSettled(state).map(s => `[${s.id}] ${s.text}`))) : '',
         ...list.map((x, n) => `## EXCHANGE ${n + 1}\n### PLAYER'S MESSAGE\n${x.player || '(none)'}\n### REPLY\n${x.reply ?? ''}\n`),
     ].join('\n');
     return [{ role: 'system', content: TRACKER_SYSTEM }, { role: 'user', content: user }];
@@ -355,7 +355,7 @@ function planContext(state, loreKeys, memory = null) {
     const queued = state.beats.filter(b => b.status === 'queued').map(b => `${b.goal || b.intent} [${b.type}${b.required ? ', required' : ''}]`);
     // Dormant threads (unseen for a while, not naming anyone here or this place) stay out of the planner's prompt.
     const threads = awakeThreads(state).map(t => t.setup);
-    const settled = arr(state.settled).map(s => s.text);
+    const settled = playerSettled(state).map(s => s.text);
     return planContextParts(state, g, cast, done, queued, threads, storySections(state, memory), loreKeys)
         + (settled.length ? `\n${section('Settled by the player (closed: never reopen)', bullets(settled))}` : '');
 }

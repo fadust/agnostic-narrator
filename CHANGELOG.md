@@ -2,6 +2,18 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+## The rest of the map audit (22 Nov 2026)
+
+*Extension only.* Findings A4-A10 of docs/director-map.md.
+
+- A4: a stated fact that someone died ("Rulf dies of his wounds", "is dead", "was killed") marks them dead and out of the scene. The name must open the fact, so "Brenn killed a collector" is not Brenn's death.
+- A5: "you" resolves to the player character only when the story profile's point of view is second person (or unset).
+- A6: after a tracker batch fits, a halved batch size grows back by one reply up to the usual size.
+- A7: only what the player settled (by command, or quoted from their own message) reaches the planner, the tracker, the spine drafter and the notes. Settled read from the story alone stays in the record.
+- A8: the model call moved from index.js to `st/call.js` (`makeCall`), with no change in behaviour.
+- A9: the tracker's batching scans the chat once per revision, not on every loop turn.
+- A10: tests for the model call (streaming, the no-streaming and temperature fallbacks, thinking out), tracker batch sizing, deaths, "you" and player-only settled. The end-to-end checks need Playwright, which is not installed here, so they were not run.
+
 ## Commands in line, profiles after swipes, scene cuts (22 Nov 2026)
 
 *Extension only.* Findings A1-A3 of docs/director-map.md.

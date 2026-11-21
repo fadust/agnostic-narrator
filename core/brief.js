@@ -4,7 +4,7 @@ import { CAPS } from './enums.js';
 import { castLine, comparisons, detectAttempt, detectExchange, pcLine } from './social.js';
 import { chapters } from './spine.js';
 import { wantOf } from './agenda.js';
-import { activeBeat } from './state.js';
+import { activeBeat, playerSettled } from './state.js';
 import { FALLBACK_NOTE } from './text.js';
 import { arr, nameKey, roughTokens } from './util.js';
 
@@ -149,7 +149,7 @@ export function buildBrief(state, opts = {}) {
     if (retcons.length) L.did_not_happen = retcons;
     const notes = state.notes.filter(n => n.turn === turn).map(n => n.text);
     if (notes.length) L.note = notes;
-    const settled = (state.settled ?? []).slice(-4).map(s => s.text);
+    const settled = playerSettled(state).slice(-4).map(s => s.text);
     if (settled.length) L.settled = settled;
     const instr = state.instructions.filter(n => n.turn === turn && !n.quiet).map(n => n.text);
     if (instr.length) L.player_request = instr;
