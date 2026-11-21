@@ -2,6 +2,12 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+## Replay cache (22 Nov 2026)
+
+*Extension only.*
+
+- The director's state is cached per chat revision: repeated reads in one pass (4-6 per setup pass) cost a 0.4 ms copy instead of a full replay (13 ms on a 97-message chat, growing with length). Any change to the messages or their records changes the key, and each pass starts with a fresh cache.
+
 ## Refactor after 0.2.0 (22 Nov 2026)
 
 *Extension only. No behaviour change, except the one noted.*

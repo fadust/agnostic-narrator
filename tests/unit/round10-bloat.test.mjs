@@ -36,3 +36,18 @@ test('similarity is unchanged by its cache', () => {
     assert.equal(similarity('the old mill burned', 'the old mill burned'), 1);
     assert.equal(similarity('apples', 'pears'), 0);
 });
+
+test('view() is cached per chat revision, returns copies, and sees new records', async () => {
+    const { makeHost, narr, user } = await import('./helpers.mjs');
+    const chat = [narr('Marda hands you the key at the inn.'), user('a'), narr('The inn is quiet tonight.')];
+    const { director } = makeHost(chat);
+    await director.kick();
+    const a = director.view();
+    const b = director.view();
+    assert.notEqual(a, b, 'a copy each time');
+    assert.deepEqual(a, b);
+    a.cast.Intruder = {};
+    assert.ok(!('Intruder' in director.view().cast), 'changing a copy never reaches the cache');
+    director.playerOp({ kind: 'settle', text: 'the key is hers to keep' });
+    assert.ok(director.view().settled.some(s => /key is hers/.test(s.text)), 'a new op changes the key');
+});

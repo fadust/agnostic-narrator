@@ -107,6 +107,17 @@ function slimRejected(list) {
     });
 }
 
+/** A cheap print of the chat for the replay cache: what replay reads, without hashing every message's text. */
+function chatPrint(chat) {
+    let out = `${chat.length}`;
+    for (const m of chat) {
+        const r = m?.extra?.narrator;
+        const mes = String(m?.mes ?? '');
+        out += `|${m?.narrator_id ?? ''}${m?.is_user ? 'u' : ''}${m?.is_system ? 'h' : ''}${m?.swipe_id ?? ''}:${mes.length}:${mes.slice(0, 12)}${mes.slice(-12)}:${arr(m?.narrator_ops).length}.${arr(m?.narrator_ops).at(-1)?.at ?? ''}:${r ? `${r.obs?.at ?? ''}.${r.obs?.hash ?? ''}.${r.track?.at ?? ''}.${arr(r.ops).length}.${arr(r.ops).at(-1)?.at ?? ''}.${r.err?.n ?? ''}.${r.trackErr?.n ?? ''}` : ''}`;
+    }
+    return out;
+}
+
 export const DEFAULTS = {
     cadence: 0,          // planner: every N turns; 0 = event-driven only (the default since 18 Nov 2026)
     nudgeAfter: 3,       // a queued beat offered this many turns without being taken is nudged once; retired 2 turns later (5 if required); 0 = never nudge
@@ -198,6 +209,8 @@ export class Director {
 
     /** Align records with the chat. Cheap; safe to call on every event. */
     sync() {
+        // Each pass starts from the chat as it is now: an edit made in place, which the cache key cannot see, is picked up here.
+        this.viewCache = null;
         const chat = this.host.chat();
         const r = reconcile(chat, this.host.narrator(), this.mids);
         this.mids = r.mids;
@@ -208,8 +221,23 @@ export class Director {
     }
 
     /** @param {{includeProvisional?: boolean, upto?: number}} [opts] */
+    /**
+     * The state, rebuilt by replay. Cached per chat revision (audit, 22 Nov 2026: one setup pass replayed the whole chat
+     * 4-6 times). The key is a cheap print of every message (text length and ends, swipe, hidden flag, record and op
+     * counts and times) plus the context and options; any change to the chat or the records changes it. Callers get a
+     * copy, so nothing they do to the state reaches the cache.
+     */
     view(opts) {
-        return replay(this.host.chat(), this.ctx(), opts);
+        const chat = this.host.chat();
+        const ctx = this.ctx();
+        const key = `${JSON.stringify(opts ?? {})}#${JSON.stringify(ctx)}#${chatPrint(chat)}`;
+        const hit = this.viewCache?.get(key);
+        if (hit) return structuredClone(hit);
+        const state = replay(chat, ctx, opts);
+        this.viewCache ??= new Map();
+        if (this.viewCache.size >= 6) this.viewCache.delete(this.viewCache.keys().next().value);
+        this.viewCache.set(key, structuredClone(state));
+        return state;
     }
 
     lorebook(state = null) {

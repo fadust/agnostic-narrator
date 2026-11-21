@@ -390,6 +390,7 @@ test('passers-by known only by a role are not cast: refused when new, dropped fr
     const d = chat[0].extra.narrator.obs.delta;
     d.cast_changes = [{ who: 'cobbler', change: 'introduced', quote: 'x' }];
     d.scene.present = ['Marda', 'cobbler'];
+    director.sync(); // an in-place edit is seen from the next pass on
     const s = director.view();
     assert.ok(!('cobbler' in s.cast) && 'Marda' in s.cast);
     assert.deepEqual(s.scene.present, ['Marda']);
