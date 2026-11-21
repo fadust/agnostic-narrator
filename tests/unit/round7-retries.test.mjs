@@ -36,3 +36,13 @@ test('an answer resets the run of empty answers', async () => {
     await director.kick();
     assert.equal(director.emptyRun.observer, undefined);
 });
+
+// Live, 21 Nov 2026: a slow planner model was cut at 60 s ("socket hang up") and retried every 90 s without end.
+test('a dropped connection backs off like an empty answer, then stops', async () => {
+    const chat = [narr('The story opens at the gate of Houshan.'), user('x'), narr('Ji Si waits beneath the arch tonight.')];
+    const { director, state } = makeHost(chat, { script: () => { throw new Error('request to https://nano-gpt.com/api/v1/chat/completions failed, reason: socket hang up'); } });
+    for (let k = 0; k < 10; k++) await director.kick();
+    clearTimeout(director.retryTimer);
+    assert.equal(state.calls.filter(c => c.module === 'observer').length, 3 + 2 * 2);
+    assert.ok(director.errors.some(e => /socket hang up, \d in a row; automatic retries stopped/.test(e.error)));
+});

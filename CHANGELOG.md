@@ -2,6 +2,13 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+## Room for slow models (21 Nov 2026)
+
+*Extension only.*
+
+- Director calls are streamed. A slow thinking model used to send nothing for a minute and the connection was cut ("socket hang up"); a stream keeps it open while the model thinks. A connection that refuses streaming gets plain requests from then on.
+- A dropped connection (socket hang up, reset, timeout) is retried after 20 s, 60 s and 180 s, then stops until "Retry failed calls", like an empty answer. It used to retry every 90 s without end. The spine step waits the same way.
+
 ## Deeds count, and goals with something at stake (21 Nov 2026)
 
 *Extension only.*

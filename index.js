@@ -26,6 +26,8 @@ const SKIP_TYPES = new Set(['quiet', 'impersonate']);
 const SYSTEM_PROMPT_SOURCES = new Set(['claude', 'makersuite', 'vertexai']);
 const PLANNING_MODULES = new Set(['planner', 'opening']);
 const tempRefused = new Set();
+// Profiles whose connection refused a streamed request: they get plain requests from then on.
+const noStream = new Set();
 
 const SETTINGS_DEFAULTS = {
     enabled: true,
@@ -167,7 +169,16 @@ const host = {
         const role = String(module).replace(/-check$/, '');
         const profile = settings.profiles?.[role] || settings.profile;
         if (profile) {
-            const opts = { stream: false, signal, extractData: true, includePreset: true, includeInstruct: true };
+            // Streamed (owner, 21 Nov 2026): a slow thinking model sends nothing for a minute without streaming, and the
+            // connection is cut ("socket hang up"). A stream keeps it alive. A profile that refuses streaming falls back.
+            const streams = !noStream.has(profile);
+            const opts = { stream: streams, signal, extractData: true, includePreset: true, includeInstruct: true };
+            const collect = async (r) => {
+                if (typeof r !== 'function') return r;
+                let content = '', reasoning = '';
+                for await (const chunk of r()) { content = chunk?.text ?? content; reasoning = chunk?.state?.reasoning ?? reasoning; }
+                return { content, reasoning };
+            };
             // A thinking model can spend the whole answer limit thinking and return no answer. Say so: retrying the same
             // call with the same limit would only fail again.
             const answer = (r) => {
@@ -175,7 +186,17 @@ const host = {
                 if (!String(text).trim() && String(r?.reasoning ?? '').trim()) throw new Error(`${module}: the model spent its whole answer limit (${maxTokens} tokens) thinking and wrote no answer. Raise this module's answer limit, or give it a model that thinks less.`);
                 return text;
             };
-            const send = async (payload) => answer(await c.ConnectionManagerRequestService.sendRequest(profile, messages, maxTokens, opts, payload));
+            const request = async (payload, o) => answer(await collect(await c.ConnectionManagerRequestService.sendRequest(profile, messages, maxTokens, o, payload)));
+            const send = async (payload) => {
+                if (!streams) return request(payload, opts);
+                try {
+                    return await request(payload, opts);
+                } catch (e) {
+                    if (!/stream/i.test(`${e?.message} ${e?.cause?.message ?? ''}`)) throw e;
+                    noStream.add(profile);
+                    return request(payload, { ...opts, stream: false });
+                }
+            };
             // The director sets its own temperature, so it does not depend on how the profile's preset was saved.
             const temperature = PLANNING_MODULES.has(role) ? settings.tempPlan : settings.tempRecord;
             if (!settings.setTemps || tempRefused.has(profile)) return await send({});

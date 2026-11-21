@@ -93,6 +93,7 @@ const MEMORY_MS = 5_000;
 // retries against a failing model burned ~160k prompt tokens). Past the last, an empty answer is an ordinary failure:
 // it counts against a reply's tries and waits for "Retry failed calls".
 const TRANSIENT_WAITS = [20_000, 60_000, 180_000];
+const DROPPED = /socket hang up|ECONNRESET|ETIMEDOUT|ECONNREFUSED|fetch failed|network error|terminated/i;
 
 export const DEFAULTS = {
     cadence: 0,          // planner: every N turns; 0 = event-driven only (the default since 18 Nov 2026)
@@ -259,6 +260,13 @@ export class Director {
                 return entry.raw;
             } catch (e) {
                 entry.error = String(e?.cause?.message ?? e?.message ?? e);
+                // A dropped connection (socket hang up, reset, timeout) is the connection's failure too: retried with
+                // growing waits, then stopped, like an empty answer (owner, 21 Nov 2026).
+                if (!e?.transient && DROPPED.test(`${entry.error} ${e?.message ?? ''}`)) {
+                    const run = this.emptyRun[module] = (this.emptyRun[module] ?? 0) + 1;
+                    if (run <= TRANSIENT_WAITS.length) throw Object.assign(new Error(`${module}: ${entry.error}`), { transient: true, run });
+                    throw new Error(`${module}: ${entry.error}, ${run} in a row; automatic retries stopped until "Retry failed calls"`);
+                }
                 throw e;
             } finally {
                 entry.ms = Date.now() - started;
@@ -640,7 +648,7 @@ export class Director {
         // The spine follows the arc at once, so the first plan already serves it. A failed draft does not block the plan;
         // the spine step tries again later.
         if (!state.spine) {
-            try { if (await this.ensureSpine()) { wrote = true; state = this.view(); } } catch (e) { this.cool.spine = Date.now() + COOL_MS; this.fail('spine', e); }
+            try { if (await this.ensureSpine()) { wrote = true; state = this.view(); } } catch (e) { this.cool.spine = Date.now() + (e?.transient ? this.transientWait(e.run) : COOL_MS); this.fail('spine', e); if (e?.transient) this.retrySoon(e.run); }
         }
         const drafted = await this.json('planner', planPrompt({ state, loreKeys, reason, memory: memory(state) }), (raw) => validatePlan(raw, state));
         // Plan check: code flags, and one cheap rewrite call only when something is flagged. Runs here, in the background
