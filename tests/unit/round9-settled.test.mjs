@@ -35,8 +35,8 @@ test('settled matters are kept once, trigger a re-plan, and reach planner, obser
     applyDelta(s, validateObservation({ summary: 'x', settled: [{ text: 'Max wants nothing in return for his help.', quote: 'Just a helping hand' }] }, ctx), { mid: 'bbcdef123456', i: 5 });
     assert.equal(s.settled.length, 1, 'a close rewording is the same matter');
     assert.match(planTrigger(s), /^settled by the player: Max wants nothing in return/);
-    s.meta.lastPlanTurn = 5;
-    assert.equal(planTrigger(s), null, 'once planned around, it does not re-plan again');
+    applyOp(s, { kind: 'plan', by: 'director', value: { beats: [], scenes: [] } }, { mid: 'bbcdef123456' }, []);
+    assert.ok(!/^settled/.test(planTrigger(s) ?? ''), 'once planned around, it does not re-plan for it again');
     assert.match(planPrompt({ state: s, loreKeys: [], reason: 'x' })[1].content, /## Settled by the player \(closed: never reopen\)\n- Max wants nothing in return/);
     assert.match(PLAN_RULES, /Settled matters are closed/);
     assert.match(observerPrompt({ state: s, reply, playerMessage: player, offered: {} })[1].content, /## Settled \(already recorded\)/);

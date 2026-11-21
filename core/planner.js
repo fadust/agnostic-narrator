@@ -271,7 +271,7 @@ export function planTrigger(state, cfg = { cadence: 0 }) {
     const queued = state.beats.filter(b => b.status === 'queued').length;
     if (!queued) return 'queue empty';
     // The player settled something: openings that press it must go now (owner, 21 Nov 2026).
-    const settledNow = (state.settled ?? []).filter(s => (s.turn ?? -1) > m.lastPlanTurn).map(s => s.text);
+    const settledNow = (m.settledPending ?? []).filter(t => (state.settled ?? []).some(s => s.text === t));
     if (settledNow.length) return `settled by the player: ${settledNow.join('; ')}. Drop every opening that presses it, and plan something new`;
     // Threads running low: the last opening is in use and little is left open. Refill before the queue runs dry.
     if (queued === 1 && awakeThreads(state).length < 2 && m.lastPlanTurn < m.turn) return 'threads running low: plan new openings from what is in play, tied to the cast and the spine';

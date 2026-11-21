@@ -42,11 +42,14 @@ export function validateObservation(raw, ctx) {
         return q && q !== it.quote ? { ...it, quote: q } : it;
     };
     const names = new Map(arr(ctx.names).map(n => [nameKey(n), n]));
+    // Other names a known person goes by (from their lorebook keys) resolve to them.
+    const aliases = new Map(Object.entries(isObj(ctx.aliases) ? ctx.aliases : {}).map(([a, n]) => [nameKey(a), n]).filter(([k, n]) => k && names.has(nameKey(n))));
     // Models write "the player", a first name, or a title plus surname. All of those are the same person.
     const resolve = (n) => {
         const k = nameKey(n);
         if (!k) return undefined;
         if (names.has(k)) return names.get(k);
+        if (aliases.has(k)) return aliases.get(k);
         if (ctx.player && PLAYER_ALIASES.test(k)) return ctx.player;
         const hits = partial(k);
         return hits.length === 1 ? hits[0] : undefined;
@@ -132,6 +135,11 @@ export function validateObservation(raw, ctx) {
             const present = [];
             for (const n of s.present) {
                 const r = resolve(n);
+                // A known character counts as present when the reply mentions them or they were already in the scene
+                // (silent people stay); a known name pinned on someone the reply never names is refused (audit, 21 Nov 2026).
+                if (r && !arr(ctx.present).includes(r) && !String(r).split(/\s+/).some(w => w.length >= 3 && hay.includes(normalise(w)))) {
+                    reject('scene', 'present: not in the reply or the scene', n); continue;
+                }
                 if (r) { if (!present.includes(r)) present.push(r); continue; }
                 // Not on record, but named in the reply itself: accept, so a forgotten "introduced" cannot drop someone.
                 const name = str(n, 60);
@@ -191,7 +199,7 @@ export function validateObservation(raw, ctx) {
         const text = str(it.text, 200);
         if (!text) return 'no text';
         const q = str(it.quote);
-        const inPlayer = q && playerHay.includes(normalise(q));
+        const inPlayer = q && normalise(q).length >= 8 && quoteMatches(q, ctx.playerMessage ?? '', playerHay);
         if (!inPlayer && !quoted(q)) return "quote not in the reply or the player's message";
         if (seenSettled.includes(text)) return 'duplicate';
         seenSettled.push(text);
@@ -406,6 +414,15 @@ export function validateTracking(raw, ctx) {
             if (!arr(sp.criterionIds).includes(m.id)) { reject('spine', 'mark: criterion not on offer', m); continue; }
             if (m.mark !== 'met' && m.mark !== 'failed') { reject('spine', 'mark: unknown value', m); continue; }
             if (seenMark.has(m.id)) { reject('spine', 'mark: criterion already marked', m); continue; }
+            // A settled matter closes a criterion by its id: no quote from this batch is needed, the player settled it
+            // earlier (audit, 21 Nov 2026: the prompt asked for this, the validator refused every one).
+            if (m.mark === 'failed' && typeof m.settled === 'string' && m.settled) {
+                if (!arr(ctx.settledIds).includes(m.settled)) { reject('spine', 'failed: unknown settled matter', m); continue; }
+                seenMark.add(m.id);
+                delta.marks.push({ id: m.id, mark: 'failed', quote: '', exchange: texts.length, reason: `settled: ${m.settled}`, settled: m.settled });
+                accepted++;
+                continue;
+            }
             // A failure is permanent, so it must say what makes the criterion impossible; "not shown here" is no reason.
             const reason = str(m.reason, 200);
             if (m.mark === 'failed' && reason.replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ').length < 3) { reject('spine', 'failed: no reason why it can never become true', m); continue; }

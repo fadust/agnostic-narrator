@@ -414,7 +414,7 @@ export function applyDelta(state, obs, entry) {
 
     for (const st of arr(d.statuses)) {
         const c = ensureCast(state, st.who);
-        const at = c.statuses.findIndex(x => nameKey(x.name) === nameKey(st.status));
+        const at = statusIndex(c.statuses, st.status);
         if (st.op === 'add') {
             const item = { name: st.status, severity: st.severity, affects: st.affects, treated: false, since: turn, source: mid };
             if (at === -1) c.statuses.push(item); else c.statuses[at] = item;
@@ -463,19 +463,11 @@ export function applyDelta(state, obs, entry) {
         // Patience: replies in a row this opening was offered and left untouched. Going elsewhere (preempted) is the
         // player choosing, and movement toward it is not waiting: both start the count again.
         beat.waiting = dir.beat === 'untouched' || !dir.beat ? (beat.waiting ?? 0) + 1 : 0;
-        if (dir.beat === 'complete') {
-            beat.status = 'complete';
-            beat.completed = mid;
-            state.meta.beatLog.push(beat.type);
-            // A completed beat plants the hook it named (found live, 21 Nov 2026: nothing ever named one, so every hook
-            // stayed unplanted and kept being offered to the planner).
-            const hook = arr(state.arc?.payoff?.hooks)[(beat.plants ?? 0) - 1];
-            if (hook) hook.planted = true;
-            for (const h of arr(state.arc?.payoff?.hooks)) if (h.beat === beat.id) h.planted = true;
-        } else if (dir.beat === 'advanced') {
+        if (dir.beat === 'complete') completeBeat(state, beat, mid);
+        else if (dir.beat === 'advanced') {
             beat.progress = (beat.progress ?? 0) + 1;
             // Three replies moving toward an intent have delivered it, whatever the model calls it.
-            if (beat.progress >= 3) { beat.status = 'complete'; beat.completed = mid; state.meta.beatLog.push(beat.type); }
+            if (beat.progress >= 3) completeBeat(state, beat, mid);
         } else if (dir.beat === 'preempted') {
             beat.preempted = (beat.preempted ?? 0) + 1;
             // Deviation bends the plan: an optional beat the player walked past twice is dropped, never forced back.
@@ -564,6 +556,7 @@ export function applyOp(state, op, entry, chatMids) {
             applyPlanSpine(state, v, `${tag}${seq}`);
             applyPlanAgendas(state, v);
             state.meta.lastPlanTurn = turn;
+            state.meta.settledPending = [];
             state.meta.quiet = 0;
             for (const i of state.instructions) i.planned = true;
             state.meta.planReason = op.reason ?? '';
@@ -582,6 +575,10 @@ export function applyOp(state, op, entry, chatMids) {
             const v = op.value ?? {};
             const people = !op.pc && arr(v.people).length >= 2 ? v.people : [{ ...v, name: op.pc ? op.name : castName(op.name, v.name) }];
             const names = people.map(p => p.name);
+            // A profile drawn from the story or a lorebook entry rests on the person having been introduced. When the
+            // reply that introduced them is swiped away, so is the person: the profile does not bring them back
+            // (audit, 21 Nov 2026: a name from a discarded swipe stayed in the cast and moved onto another man).
+            if (op.lore && !op.pc && !names.some(n => state.cast[n])) break;
             const before = state.cards[op.name]?.people ?? [op.name];
             state.cards[op.name] = { hash: op.cardHash ?? null, people: names, ...(op.lore ? { lore: true } : {}) };
             for (const old of before) {
@@ -598,11 +595,19 @@ export function applyOp(state, op, entry, chatMids) {
                 // clearing the field lets the next profile fill it again.
                 for (const k of ['gender', 'race', 'age_group', 'appearance']) if (p[k] && !c[k]) c[k] = p[k];
                 // Starting values are derived once; later changes come only from narrated evidence.
-                if (p.stats && (!c.stats || op.force)) c.stats = clone(p.stats);
+                if (p.stats && (!c.stats || (op.force && !c.statsByPlayer))) c.stats = clone(p.stats);
                 if (p.tells) c.tells = clone(p.tells);
                 if (p.temperament) c.temperament = p.temperament;
                 if (p.unprompted) c.unprompted = p.unprompted;
                 if (op.pc) c.pc = true;
+                // Other names the person goes by, from their lorebook entry's keys (audit, 21 Nov 2026: "the Crimson
+                // Dragon" would otherwise pass as a new person). Never another cast member's name.
+                if (people.length === 1) {
+                    const own = nameKey(p.name);
+                    const extra = arr(op.aliases).map(a => String(a ?? '').trim()).filter(a => a && a.length <= 40 && nameKey(a) !== own
+                        && !Object.keys(state.cast).some(n => n !== p.name && nameKey(n) === nameKey(a)));
+                    if (extra.length) c.aliases = [...new Set([...arr(c.aliases), ...extra])].slice(0, 8);
+                }
                 c.cardHash = op.cardHash ?? c.cardHash;
             }
             break;
@@ -635,6 +640,9 @@ export function applyOp(state, op, entry, chatMids) {
                     state.meta.clearedAgendas = [...cleared];
                 }
                 setPath(state, op.path, clone(op.value));
+                // Stats the player sets by hand are never overwritten by a re-profile.
+                const sm = /^cast\.([^.]+)(?:\.stats)?$/.exec(op.path ?? '');
+                if (sm && op.by === 'player' && state.cast[sm[1]] && (op.path.endsWith('.stats') || op.value?.stats)) state.cast[sm[1]].statsByPlayer = true;
             }
             break;
         case 'cast': {
@@ -760,8 +768,11 @@ export function replay(chat, ctx, opts = {}) {
             }
             // The spine tracker's reading of this reply, kept apart from the observer's: either can fail alone.
             // Called for every counted reply, read or not, so scene boundaries are seen.
-            if (!e.hidden && (e.committed || includeProvisional)) {
-                applySpineDelta(state, e.trackPart, e, sceneKey(state), e.tracked);
+            if (e.committed || includeProvisional) {
+                if (!e.hidden) applySpineDelta(state, e.trackPart, e, sceneKey(state), e.tracked);
+                // A reply hidden later (a summary extension hides what it has summarised) keeps what the tracker found in
+                // it; only the scene-boundary bookkeeping is skipped (audit, 21 Nov 2026: 4 of 7 readings vanished).
+                else if (e.trackPart) applySpineDelta(state, e.trackPart, e, state.spine?.scene?.key ?? null, true);
             }
         }
         for (const op of e.ops) {
@@ -792,12 +803,44 @@ export function logOp(message, op) {
     }
 }
 
+/**
+ * One way to finish a beat, whatever finished it. A completed beat plants the hook it named (found live, 21 Nov 2026:
+ * nothing ever named one; audit the same day: a beat finished by three "advanced" replies skipped the planting).
+ */
+function completeBeat(state, beat, mid) {
+    beat.status = 'complete';
+    beat.completed = mid;
+    state.meta.beatLog.push(beat.type);
+    const hook = arr(state.arc?.payoff?.hooks)[(beat.plants ?? 0) - 1];
+    if (hook) hook.planted = true;
+}
+
+/** Words that say how bad or what kind a condition is, not where or what: never enough to call two statuses the same. */
+const STATUS_GENERIC = new Set(['injury', 'injured', 'wound', 'wounded', 'wounds', 'infection', 'infected', 'broken', 'deep', 'minor', 'major',
+    'severe', 'bad', 'light', 'heavy', 'cut', 'bruise', 'bruised', 'pain', 'left', 'right', 'the', 'and', 'with', 'from', 'her', 'his', 'their']);
+/**
+ * The status a new reading refers to: the same name, or failing that the one condition sharing a telling word with it
+ * ("knee injury" = "infected knee wound"; audit, 21 Nov 2026: treatments under a new wording did nothing).
+ */
+export function statusIndex(statuses, name) {
+    const k = nameKey(name);
+    const exact = arr(statuses).findIndex(x => nameKey(x.name) === k);
+    if (exact !== -1) return exact;
+    const telling = (t) => nameKey(t).split(' ').filter(w => w.length >= 3 && !STATUS_GENERIC.has(w)).map(w => w.replace(/s$/, ''));
+    const mine = telling(name);
+    const hits = arr(statuses).map((x, i) => [i, telling(x.name)]).filter(([, ws]) => ws.some(w => mine.includes(w))).map(([i]) => i);
+    return hits.length === 1 ? hits[0] : -1;
+}
+
 /** Record a settled matter once (a close rewording counts as the same), newest kept, capped. */
 function addSettled(state, { text, quote = '', by = 'story', source = '', turn = 0 }) {
     const t = String(text ?? '').trim().slice(0, CAPS.settledText ?? 200);
     if (!t) return;
     state.settled = arr(state.settled).filter(x => similarity(x.text, t) < 0.6);
-    state.settled.push({ id: `st-${String(source).slice(0, 8)}-${state.settled.length}`, text: t, quote, by, source, turn });
+    state.settled.push({ id: `st-${hash(t.toLowerCase())}`, text: t, quote, by, source, turn });
     if (state.settled.length > CAPS.settledKept) state.settled.shift();
     state.meta.settledTurn = turn;
+    // What the player settled waits for the next plan to be planned around (audit, 21 Nov 2026: comparing turns missed a
+    // settle logged on the same message as the latest plan). Settled from the story alone records it, no re-plan.
+    if (by === 'player') state.meta.settledPending = [...new Set([...arr(state.meta.settledPending), t])];
 }

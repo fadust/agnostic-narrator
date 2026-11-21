@@ -76,7 +76,7 @@ Spine rules:
 - Give "exchange", the number of the exchange that shows it, for every "toward", "against", mark and "happened"; its quote must come from that exchange's REPLY.
 
 ${JSON_ONLY}
-{"readings": [{"ending": "id", "reading": "${list(READINGS)}", "exchange": 1, "quote": "required for toward and against"}], "marks": [{"id": "criterion id", "mark": "met | failed", "evidence": "occurred | shown | implied", "exchange": 1, "quote": "", "by": "who speaks or acts in the quote", "also": {"exchange": 2, "quote": ""}, "reason": "failed only: why it can never become true"}], "happened": [{"milestone": "id", "exchange": 1, "quote": "", "by": ""}]}`;
+{"readings": [{"ending": "id", "reading": "${list(READINGS)}", "exchange": 1, "quote": "required for toward and against"}], "marks": [{"id": "criterion id", "mark": "met | failed", "evidence": "occurred | shown | implied", "exchange": 1, "quote": "", "by": "who speaks or acts in the quote", "also": {"exchange": 2, "quote": ""}, "reason": "failed only: why it can never become true", "settled": "failed only, when a settled matter closes it: its id"}], "happened": [{"milestone": "id", "exchange": 1, "quote": "", "by": ""}]}`;
 
 /**
  * Tracker slice: ending titles and open criteria, the first open milestones' open criteria, and the batch of exchanges
@@ -95,7 +95,7 @@ export function trackerPrompt({ state, exchanges, reply, playerMessage }) {
         sv?.endings.length ? section('Endings (one reading for each)', sv.endings.map(e => `- ${e.id}: ${e.title}`).join('\n')) : '',
         sv?.milestones.length ? section('Milestones in progress', sv.milestones.map(m => `- ${m.id}: ${m.title}`).join('\n')) : '',
         groups.length ? section('Open criteria (mark only those an exchange settles; most exchanges settle none)', groups.map(([title, it]) => `${title}:\n${crit(it)}`).join('\n')) : '',
-        arr(state.settled).length ? section('Settled by the player (closed: a criterion that needs one reopened can never be met; mark it failed, reason "settled")', bullets(state.settled.map(s => s.text))) : '',
+        arr(state.settled).length ? section('Settled by the player (closed: a criterion that needs one reopened can never be met; mark it failed with "settled": its id, no quote or reason needed)', bullets(state.settled.map(s => `[${s.id}] ${s.text}`))) : '',
         ...list.map((x, n) => `## EXCHANGE ${n + 1}\n### PLAYER'S MESSAGE\n${x.player || '(none)'}\n### REPLY\n${x.reply ?? ''}\n`),
     ].join('\n');
     return [{ role: 'system', content: TRACKER_SYSTEM }, { role: 'user', content: user }];
@@ -130,7 +130,7 @@ export function trackCheckPrompt({ items }) {
 export function observerPrompt({ state, reply, playerMessage, offered }) {
     const player = state.meta.player;
     const chars = Object.entries(state.cast).map(([n, c]) => {
-        const bits = [n === player ? 'the player character' : c.dead ? 'DEAD' : null, ...standouts(c), statusPhrase(c)].filter(Boolean);
+        const bits = [n === player ? 'the player character' : c.dead ? 'DEAD' : null, arr(c.aliases).length ? `also called ${c.aliases.join(', ')}` : null, ...standouts(c), statusPhrase(c)].filter(Boolean);
         return `${n}${bits.length ? ` (${bits.join('; ')})` : ''}`;
     });
     if (player && !state.cast[player]) chars.push(`${player} (the player character)`);

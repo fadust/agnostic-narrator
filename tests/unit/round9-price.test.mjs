@@ -44,7 +44,7 @@ test('settled reaches the tracker, the spine drafter and the planner\'s wants an
     s.settled = [{ id: 'st-1', text: 'Max wants nothing in return for his help', turn: 3 }];
     s.spine = { question: 'q', endings: [{ id: 'e1', title: 'E', criteria: [{ id: 'e1-c1', text: 'Elizabeth owes Max a debt', mark: 'open' }] }], milestones: [], readings: [], turnedAway: [], scene: {} };
     const tr = trackerPrompt({ state: s, exchanges: [{ player: 'p', reply: 'r' }] })[1].content;
-    assert.match(tr, /## Settled by the player[^\n]*mark it failed, reason "settled"\)\n- Max wants nothing in return/);
+    assert.match(tr, /## Settled by the player[^\n]*"settled": its id[^\n]*\n- \[st-1\] Max wants nothing in return/);
     const sp = spinePrompt({ material: 'm', genre: {}, premise: '', arc: s.arc, player: 'Max', settled: ['Max wants nothing in return for his help'], story: 'They reached the cooper\'s room.' })[1].content;
     assert.match(sp, /## Settled by the player[^\n]*\n- Max wants nothing in return/);
     assert.match(sp, /## Story so far \(a redraft[^\n]*\nThey reached the cooper's room\./);

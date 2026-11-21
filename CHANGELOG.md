@@ -2,6 +2,21 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+## Who is who, and settled that sticks (21 Nov 2026)
+
+*Extension only.* Found by an audit of a long group play-test (docs/audit-2026-11-21.md, Phase 1).
+
+- The player character is profiled from the persona plus their own lorebook entry (title or first key is their name). Before, a persona holding only looks left a lore-written fighter noted as "an ordinary person's limits apply". Their sheet follows those sources until you set the stats by hand.
+- Other names: a lorebook entry's keys become the person's other names ("Crimson Dragon" is Max). The observer sees them and resolves them to the person instead of a newcomer.
+- A name from a swiped-away reply no longer stays in the cast: a profile drawn from the story or a lorebook entry does not bring back someone whose introduction is gone.
+- A known name counts as present only when the reply mentions them or they were already in the scene.
+- A status under another wording is the same condition ("knee injury" and "infected knee wound"), so treatments land.
+- Settled matters close spine criteria by their id. The tracker was told to do this, but the validator refused every one.
+- A settle on the same message as the latest plan now re-plans. Only what the player settled re-plans; settled read from the story alone is recorded without one. A player quote must be at least 8 characters.
+- Settled ids come from the text, so two never collide and unsettle removes only one.
+- Spine findings from replies a summary extension hides later are kept.
+- A beat finished by three "advanced" replies plants its hook too.
+
 ## The price loop (21 Nov 2026)
 
 *Extension only.*

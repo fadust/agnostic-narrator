@@ -39,7 +39,7 @@ export function loreCards(state, entries) {
         if (!entry || entry.content.trim().length < 20) continue;
         const h = hash(entry.content);
         if (state.cards?.[name]?.hash === h) continue;
-        out.push({ name, text: entry.content, hash: h });
+        out.push({ name, text: entry.content, hash: h, aliases: arr(entry.keys) });
     }
     return out;
 }
@@ -400,6 +400,7 @@ export class Director {
             const names = [...Object.keys(before.cast), before.meta.player].filter(Boolean);
             const v = validateObservation(parsed.value, {
                 text: entry.text, names, tombstones: before.tombstones, present: before.scene.present,
+                aliases: Object.fromEntries(Object.entries(before.cast).flatMap(([n, c]) => arr(c.aliases).map(a => [a, n]))),
                 uncertainIds: before.uncertain.map(u => u.id), threadIds: before.threads.map(t => t.id),
                 clueIds: offered.clues, player: before.meta.player, playerMessage,
                 known: [playerMessage, ...before.canon.map(f => f.fact), ...before.uncertain.map(f => f.fact)].join('\n'),
@@ -487,7 +488,7 @@ export class Director {
             if (!parsed.ok) throw new Error(`tracker: ${parsed.error}`);
             const ids = spineIds(before);
             const texts = batch.map(e => e.text);
-            const v = await this.checkMarks(validateTracking(parsed.value, { texts, spine: ids, names: Object.keys(before.cast), player: before.meta.player }), texts, before, ids);
+            const v = await this.checkMarks(validateTracking(parsed.value, { texts, spine: ids, names: Object.keys(before.cast), player: before.meta.player, settledIds: arr(before.settled).map(s => s.id) }), texts, before, ids);
             if (!stillCurrent()) { this.again = true; return false; }
             rec.track = { covers: batch.map(e => ({ mid: e.mid, hash: e.hash })), delta: v.delta, rejected: v.rejected, at: Date.now(), strip: [...(this.host.narrator()?.strip ?? [])] };
             delete rec.trackErr;
@@ -583,7 +584,8 @@ export class Director {
             try {
                 const value = await this.json('profile', profilePrompt({ name: card.name, card: card.text, genre: state.genre, isPlayer: card.isPlayer }), validateProfile);
                 // A changed card refreshes the description and tells; stats keep their played values.
-                wrote = this.logSetup(epoch, { kind: 'profile', by: 'setup', name: card.name, value, cardHash: h, pc: !!card.isPlayer }) || wrote;
+                // The player character's sheet follows their sources until the player sets the stats by hand (audit, 21 Nov 2026).
+                wrote = this.logSetup(epoch, { kind: 'profile', by: 'setup', name: card.name, value, cardHash: h, pc: !!card.isPlayer, ...(card.isPlayer ? { force: true } : {}), ...(card.aliases?.length ? { aliases: card.aliases } : {}) }) || wrote;
             } catch (e) {
                 this.cool.profile = Date.now() + COOL_MS;
                 this.fail('profile', e);
@@ -599,7 +601,7 @@ export class Director {
                 const value = await this.json('profile', profilePrompt({ name: card.name, card: card.text, genre: state.genre, isPlayer: false }), validateProfile);
                 delete value.people;
                 value.name = card.name;
-                wrote = this.logSetup(epoch, { kind: 'profile', by: 'setup', name: card.name, value, cardHash: card.hash, lore: true }) || wrote;
+                wrote = this.logSetup(epoch, { kind: 'profile', by: 'setup', name: card.name, value, cardHash: card.hash, lore: true, aliases: card.aliases }) || wrote;
             } catch (e) {
                 this.cool.profile = Date.now() + COOL_MS;
                 this.fail('profile', e);

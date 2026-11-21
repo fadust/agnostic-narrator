@@ -216,7 +216,12 @@ const host = {
         const c = ctx();
         const cards = castCards().map(({ name, text }) => ({ name, text }));
         const persona = c.powerUserSettings?.persona_description;
-        if (c.name1 && persona) cards.push({ name: c.name1, text: persona, isPlayer: true });
+        // The player character's own lorebook entry counts too (audit, 21 Nov 2026: a persona holding only looks left a
+        // lore-written S-class fighter profiled as an ordinary man).
+        const low = String(c.name1 ?? '').trim().toLowerCase();
+        const mine = low ? loreEntries.filter(e => [e.comment, e.keys[0]].some(k => String(k ?? '').trim().toLowerCase() === low)) : [];
+        const text = [persona, ...mine.map(e => e.content.trim())].filter(Boolean).join('\n\n').slice(0, 4000);
+        if (c.name1 && text) cards.push({ name: c.name1, text, isPlayer: true, aliases: mine.flatMap(e => e.keys) });
         return cards;
     },
     async material() {
