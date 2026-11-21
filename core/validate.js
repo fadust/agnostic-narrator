@@ -13,7 +13,7 @@ import { arr, isBlank, isObj, nameKey, similarity, str } from './util.js';
 const PLAYER_ALIASES = /^(the )?(player|player character|user|pc|protagonist|you|\{\{user\}\})$/;
 
 const TOP_KEYS = [
-    'summary', 'scene', 'facts', 'confirmed', 'beliefs', 'relationships', 'stats', 'statuses', 'cast_changes',
+    'summary', 'scene', 'facts', 'confirmed', 'beliefs', 'settled', 'relationships', 'stats', 'statuses', 'cast_changes',
     'threads', 'lore', 'contradictions', 'direction',
 ];
 
@@ -80,7 +80,7 @@ export function validateObservation(raw, ctx) {
     const ambiguous = (n) => !names.has(nameKey(n)) && partial(nameKey(n)).length > 1;
 
     const delta = {
-        summary: '', scene: {}, facts: [], confirmed: [], beliefs: [], relationships: [], stats: [], statuses: [],
+        summary: '', scene: {}, facts: [], confirmed: [], beliefs: [], settled: [], relationships: [], stats: [], statuses: [],
         cast_changes: [], threads: [], lore: [], contradictions: [], direction: { beat: 'untouched', clues_found: [] },
     };
     if (!isObj(raw)) {
@@ -181,6 +181,21 @@ export function validateObservation(raw, ctx) {
         const present = delta.scene.present ?? ctx.present ?? [];
         if (!present.includes(who) && !quoted(it.quote)) return 'holder not present and no quote';
         return { who, believes, true: it.true === true, quote: quoted(it.quote) ? str(it.quote) : '' };
+    });
+
+    // Settled: the player character answered a matter for good, or the player has had enough of it. The quote may come
+    // from the REPLY or from the player's own message (owner, 21 Nov 2026).
+    const playerHay = normalise(ctx.playerMessage ?? '');
+    const seenSettled = [];
+    each('settled', CAPS.settled, (it) => {
+        const text = str(it.text, 200);
+        if (!text) return 'no text';
+        const q = str(it.quote);
+        const inPlayer = q && playerHay.includes(normalise(q));
+        if (!inPlayer && !quoted(q)) return "quote not in the reply or the player's message";
+        if (seenSettled.includes(text)) return 'duplicate';
+        seenSettled.push(text);
+        return { text, quote: q, from: inPlayer ? 'player' : 'story' };
     });
 
     const axisCount = {};

@@ -29,6 +29,7 @@
   - exchange, attempt: how abilities compare in what {{user}} is trying. "attempt" limits how it turns out, not how it is told: trivial succeeds, a strain succeeds at a cost, risky may fail, beyond fails or needs help. With no attempt line, judge by the cast lines and the sense of the story's world.
   - watch: what a character does not know or wrongly believes. They act on what they know.
   - player_request: something the player asked of the story out of character. Honour it.
+  - settled: a matter {{user}} has answered for good, or the player has had enough of. It is closed: no one presses, tests or asks about it again. Characters may still feel about it and show it, but the story moves on.
   - status: a remark about the notes themselves.
 - When there are no notes, narrate from the chat as it stands.
 

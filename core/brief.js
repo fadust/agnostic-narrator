@@ -149,6 +149,8 @@ export function buildBrief(state, opts = {}) {
     if (retcons.length) L.did_not_happen = retcons;
     const notes = state.notes.filter(n => n.turn === turn).map(n => n.text);
     if (notes.length) L.note = notes;
+    const settled = (state.settled ?? []).slice(-4).map(s => s.text);
+    if (settled.length) L.settled = settled;
     const instr = state.instructions.filter(n => n.turn === turn && !n.quiet).map(n => n.text);
     if (instr.length) L.player_request = instr;
 

@@ -401,7 +401,7 @@ export class Director {
             const v = validateObservation(parsed.value, {
                 text: entry.text, names, tombstones: before.tombstones, present: before.scene.present,
                 uncertainIds: before.uncertain.map(u => u.id), threadIds: before.threads.map(t => t.id),
-                clueIds: offered.clues, player: before.meta.player,
+                clueIds: offered.clues, player: before.meta.player, playerMessage,
                 known: [playerMessage, ...before.canon.map(f => f.fact), ...before.uncertain.map(f => f.fact)].join('\n'),
             });
             rec.obs = { hash: entry.hash, delta: v.delta, accepted: v.accepted, rejected: v.rejected, beat: offered.beat, at: Date.now(), strip: [...(this.host.narrator()?.strip ?? [])] };
@@ -692,6 +692,27 @@ export class Director {
      * The spine is drafted once, after the arc, from the same story material as the genre profile.
      * `force` redrafts it (from /director spine), replacing the current one as a player edit.
      */
+    /**
+     * The player's safety valve (owner, 21 Nov 2026): a fresh arc from where the story stands, then a fresh spine and
+     * plan. Logged as player edits, so the old arc and spine are replaced, not merged. True when the arc was written.
+     */
+    async redraftArc() {
+        const cfg = this.cfg();
+        const state = this.view();
+        if (!state.genre) return false;
+        const epoch = this.epoch;
+        const loreKeys = this.host.loreKeys?.() ?? [];
+        const provided = await this.memoryRecord(cfg);
+        const memory = plannerMemory({ mode: cfg.memory, state, entries: scan(this.host.chat(), this.host.narrator()), provided });
+        const opening = this.host.chat().find(m => m.is_user && !m.is_system)?.mes ?? '';
+        const arc = await this.json('planner', arcPrompt({ state, loreKeys, memory, opening, redraft: true }), validateArc);
+        const value = { ...arc, act: state.arc?.act ?? arc.act, tension: state.arc?.tension ?? arc.tension };
+        if (!this.logSetup(epoch, { kind: 'edit', by: 'player', path: 'arc', value })) return false;
+        try { await this.ensureSpine(true); } catch (e) { this.fail('spine', e); }
+        await this.maybePlan('the player redrafted the arc: replace every queued opening with a fresh plan from where the story stands');
+        return true;
+    }
+
     async ensureSpine(force = false) {
         if (!this.host.material) return false;
         const state = this.view();

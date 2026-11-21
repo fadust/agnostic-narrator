@@ -804,6 +804,25 @@ async function directorCommand(_named, text) {
             host.save(); refresh('spine');
             return ok ? (had ? 'Spine redrafted from the setup.' : 'Spine drafted.') : 'No spine came back; see the Log tab.';
         }
+        case 'redraft': {
+            if (!director.view().genre) return 'The story profile is not ready yet.';
+            const ok = await director.redraftArc();
+            host.save(); refresh('spine');
+            return ok ? 'Arc, spine and plan redrafted from where the story stands.' : 'No arc came back; see the Log tab.';
+        }
+        case 'settle': {
+            if (!rest.trim()) return 'Usage: /director settle <what is closed, e.g. Max wants nothing in return>';
+            director.playerOp({ kind: 'settle', text: rest.trim() });
+            scheduleKick(50);
+            return 'Settled: the story will not press it again.';
+        }
+        case 'unsettle': {
+            const list = director.view().settled ?? [];
+            const item = list[Number(rest) - 1];
+            if (!item) return list.length ? `Settled:\n${list.map((s, i) => `${i + 1}. ${s.text}`).join('\n')}\nUse /director unsettle <number>.` : 'Nothing is settled.';
+            director.playerOp({ kind: 'unsettle', id: item.id });
+            return `Reopened: ${item.text}`;
+        }
         case 'opening': return await draftOpening();
         case 'setup': return await setupGroup();
         case 'retry': director.retry(); return 'Retrying failed reads.';
@@ -893,6 +912,8 @@ function registerCommand() {
 <li><code>/director retcon: the letter was burned</code></li>
 <li><code>/director pg</code> – rate this story PG: all adult content off (<code>/director pg off</code> returns to mature)</li>
 <li><code>/director explicit off</code> – keep the mature rating but fade to black on sex</li>
+<li><code>/director redraft</code> – a fresh arc, spine and plan from where the story stands, when the story feels stuck</li>
+<li><code>/director settle &lt;text&gt;</code> – close a matter so the story stops pressing it; <code>/director unsettle</code> lists and reopens</li>
 <li><code>/director spine</code> – draft the story spine (endings and milestones) now, or redraft it</li>
 <li><code>/director track</code> – check the spine against the latest replies now, without waiting for the next batch</li>
 <li><code>inspect, profile, confirm, replan, rollup, opening, suggest, setup, retry, dump, on, off</code></li></ul>`,

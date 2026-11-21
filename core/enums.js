@@ -32,6 +32,7 @@ export const TEMPO = ['slow', 'measured', 'brisk', 'relentless'];
 
 /** Per-pass caps: one reply cannot rewrite the world. */
 export const CAPS = {
+    settled: 2, settledKept: 8,
     facts: 4, beliefs: 4, relationships: 6, stats: 3, statuses: 4, cast_changes: 4, threads: 3, lore: 3,
     contradictions: 3, axisPerReply: 4, loreText: 600, loreKeys: 5, fact: 300, summary: 500,
     beats: 6, scenes: 3, clues: 3, endings: 3, hooks: 3,

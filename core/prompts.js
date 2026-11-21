@@ -33,6 +33,7 @@ Rules:
 9. A contradiction is when the REPLY plainly conflicts with a line under Established facts, or with a character's recorded condition or abilities (a dead character speaking, a slower runner catching a faster one with no stated reason). Give a one-line "correction" the narrator can apply next turn. A correction overrides the story, so be certain: a character may have learned something off-stage, changed their mind or lied. When in doubt, leave the list empty.
 10. "secret": true only when the REPLY shows someone deliberately keeping the fact from another character. "beliefs" are for a character shown believing something, above all something mistaken. A thread is an unresolved question, promise or danger the story has raised; open one only when the REPLY raises it. To advance or resolve a thread, copy its id from the Open threads list: thread ids start with "t-". Ids from Unconfirmed belong only in "confirmed", clue ids only in "clues_found"; neither ever goes in "threads". When Open threads lists none, a thread can only be opened.
 11. Text in brackets that speaks to the player out of character is not narration. Record nothing from it.
+13. "settled": a matter closed for good, so the story stops pressing it. Record one when the player character plainly and finally answers something others keep pressing (a price, a demand, a test of motive: "nothing, none, just a helping hand"), or when the player's message shows they have had enough of a thread, in or out of character ("enough", "this is too much", walking out of it). "text" says what is closed, as plain fact ("Max wants nothing in return for his help"). The quote may come from the REPLY or from the player's message. Skip what is already under Settled.
 12. A fact is worth recording only if the story could turn on it later: who someone is, what they know, want, decided, promised, owe, hold or lost, an injury, a revelation, a lasting change to a person, place or thing. Restatements of Established facts are not facts. Name each fact's "kind" from this list: ${FACT_KINDS.map(([k, , m]) => `${k} (${m})`).join('; ')}. A gesture, glance, posture or piece of scenery is not worth recording; if you are unsure, choose the kind honestly: code decides what to keep. Most replies give one to three facts, often none.
 
 ${JSON_ONLY}
@@ -45,6 +46,7 @@ Shape (all sections optional except summary):
   "facts": [{"fact": "", "quote": "", "certainty": "stated | implied", "kind": "${list(FACT_KINDS.map(([k]) => k))}", "witnesses": "present, or a list of the names who saw or heard it", "secret": false}],
   "confirmed": [{"id": "id of an Unconfirmed item the REPLY now makes certain", "quote": ""}],
   "beliefs": [{"who": "", "believes": "", "true": false, "quote": ""}],
+  "settled": [{"text": "what is closed, as plain fact", "quote": "from the REPLY or the player's message"}],
   "relationships": [{"who": "", "toward": "", "axis": "${list(AXES)}", "dir": "up | down", "weight": "minor | major | pivotal", "category": "${list(EVIDENCE)}", "quote": ""}],
   "stats": [{"who": "", "stat": "${list(STATS)}", "dir": "up | down", "size": "small | large", "quote": ""}],
   "statuses": [{"who": "", "op": "add | treat | worsen | clear", "status": "injury, poison, exhaustion, fear ...", "severity": "${list(SEVERITY)}", "affects": "one stat or null", "quote": ""}],
@@ -159,7 +161,8 @@ export function observerPrompt({ state, reply, playerMessage, offered }) {
         section('Open threads (the only ids "threads" may advance or resolve)', threads.length ? bullets(threads) : 'none: a thread can only be opened'),
         section('Things that did NOT happen (never record these)', state.tombstones.length ? bullets(state.tombstones.slice(-10).map(t => t.fact)) : ''),
         section('Notes the narrator was given (for "direction" only)', notes.length ? bullets(notes) : 'none'),
-        section('The player\'s message (context only, never a source of facts)', playerMessage || '(none)'),
+        section('The player\'s message (context only, never a source of facts; a "settled" quote may come from it)', playerMessage || '(none)'),
+        ...(arr(state.settled).length ? [section('Settled (already recorded)', bullets(state.settled.map(s => s.text)))] : []),
         `## REPLY\n${reply}`,
     ].join('\n');
     return [{ role: 'system', content: OBSERVER_SYSTEM }, { role: 'user', content: user }];
@@ -282,6 +285,7 @@ export const MOTIVE = `Motive: a person, not a saint. The goal comes from the pl
 export const PLAN_RULES = `Planning rules:
 - Plan possibilities, not a script. The plan is a ride the player may jump on or not. A beat is an opening the world offers, with a precondition ("if the player enters the city, the moneylender's men are watching the gate"), never an event that happens regardless of what the player does. Passing an opening by is a valid choice, never something to correct. Never decide the player character's actions, words or feelings.
 - The player's choices come first. If the story has moved away from the old plan, follow the story.
+- Settled matters are closed. Never plan an opening that presses, tests or reopens one, or has someone ask again; a force or want that a settled matter answers no longer drives openings. People may still feel about it; the story moves to something new.
 - The player character drives the story, not only serves it. Besides other people's needs, each plan offers at least one opening toward the player character's own goal: a chance to gain, win or take something for themselves, at a price.
 - Characters marked "main cast" are the story's core, chosen by the player. Keep them at the centre of the plan and give each a part in where the story goes; other characters take smaller roles.
 - Keep a short horizon: at most ${CAPS.scenes} scenes and ${CAPS.beats} beats. Mark a beat "required" only if the arc cannot work without it.
@@ -335,7 +339,9 @@ function planContext(state, loreKeys, memory = null) {
     const queued = state.beats.filter(b => b.status === 'queued').map(b => `${b.goal || b.intent} [${b.type}${b.required ? ', required' : ''}]`);
     // Dormant threads (unseen for a while, not naming anyone here or this place) stay out of the planner's prompt.
     const threads = awakeThreads(state).map(t => t.setup);
-    return planContextParts(state, g, cast, done, queued, threads, storySections(state, memory), loreKeys);
+    const settled = arr(state.settled).map(s => s.text);
+    return planContextParts(state, g, cast, done, queued, threads, storySections(state, memory), loreKeys)
+        + (settled.length ? `\n${section('Settled by the player (closed: never reopen)', bullets(settled))}` : '');
 }
 
 /** "Story so far" for the planner, by memory mode. Another extension's record is data under its own heading. */
@@ -409,7 +415,7 @@ function planContextParts(state, g, cast, done, queued, threads, story, loreKeys
 }
 
 /** Arc slice: profile, premise, cast, material summary. Built once, in one small call, then validated. */
-export function arcPrompt({ state, loreKeys, memory = null, opening = '' }) {
+export function arcPrompt({ state, loreKeys, memory = null, opening = '', redraft = false }) {
     return [
         {
             role: 'system',
@@ -429,7 +435,7 @@ ${JSON_ONLY}
 }
 Give two or three endings that are really different. None is chosen now; the player's choices decide.`,
         },
-        { role: 'user', content: `${planContext(state, loreKeys, memory)}${opening ? `\n${section("The player's opening move (what the player character sets out to do)", String(opening).slice(0, 1200))}` : ''}` },
+        { role: 'user', content: `${planContext(state, loreKeys, memory)}${opening ? `\n${section("The player's opening move (what the player character sets out to do)", String(opening).slice(0, 1200))}` : ''}${redraft ? `\n${section('Redraft', 'The player asked for a fresh arc: the story is under way and the old one stopped fitting. Build the goal, forces and endings from where the story stands now (Story so far, the cast, Settled), not from the opening alone. Nothing settled may return as a force.')}` : ''}` },
     ];
 }
 

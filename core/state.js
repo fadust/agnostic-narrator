@@ -50,8 +50,11 @@ export function initialState(setup = {}) {
         flags: [],
         notes: [],
         instructions: [],
+        // Matters the player character has answered for good, or the player has had enough of (owner, 21 Nov 2026).
+        // The planner never reopens them; the narrator's notes carry the latest.
+        settled: [],
         meta: {
-            turn: 0, lastPlanTurn: -1, planReason: '', deviationTurn: -1, beatLog: [], pending: [], unextracted: null,
+            turn: 0, lastPlanTurn: -1, planReason: '', deviationTurn: -1, settledTurn: -1, beatLog: [], pending: [], unextracted: null,
             accepted: 0, rejected: 0, rejections: [], player: setup.player ?? '', staleRollup: false, lagging: false,
             removedCast: [], renamedCast: {}, sceneSerial: 0,
         },
@@ -372,6 +375,8 @@ export function applyDelta(state, obs, entry) {
         if (c.beliefs.length > 12) c.beliefs.shift();
     }
 
+    for (const s of arr(d.settled)) addSettled(state, { text: s.text, quote: s.quote, by: s.from, source: mid, turn });
+
     for (const r of arr(d.relationships)) {
         const c = ensureCast(state, r.who);
         const step = WEIGHTS[r.weight] * (r.dir === 'up' ? 1 : -1);
@@ -668,6 +673,8 @@ export function applyOp(state, op, entry, chatMids) {
         case 'note': state.notes.push({ kind: 'operation', text: String(op.text ?? ''), turn }); break;
         // A bare re-plan is an instruction to the planner only: `quiet` keeps it out of the narrator's notes, which must
         // never reveal that a plan exists (found live, 18 Nov 2026).
+        case 'settle': addSettled(state, { text: op.text, by: 'player', source: entry.mid, turn }); break;
+        case 'unsettle': state.settled = arr(state.settled).filter(s => s.id !== op.id); break;
         case 'instruction': state.instructions.push({ text: String(op.text ?? ''), turn, ...(op.quiet ? { quiet: true } : {}) }); break;
         case 'facts-clean': {
             // The periodic clean-up. Merges: the listed facts become one, at the newest one's place and id, worded as
@@ -779,4 +786,14 @@ export function logOp(message, op) {
     } else {
         (message.narrator_ops ??= []).push(item);
     }
+}
+
+/** Record a settled matter once (a close rewording counts as the same), newest kept, capped. */
+function addSettled(state, { text, quote = '', by = 'story', source = '', turn = 0 }) {
+    const t = String(text ?? '').trim().slice(0, CAPS.settledText ?? 200);
+    if (!t) return;
+    state.settled = arr(state.settled).filter(x => similarity(x.text, t) < 0.6);
+    state.settled.push({ id: `st-${String(source).slice(0, 8)}-${state.settled.length}`, text: t, quote, by, source, turn });
+    if (state.settled.length > CAPS.settledKept) state.settled.shift();
+    state.meta.settledTurn = turn;
 }

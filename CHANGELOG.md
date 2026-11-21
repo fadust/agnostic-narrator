@@ -2,6 +2,16 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+## Settled stays settled, and a redraft button (21 Nov 2026)
+
+*Extension and card: re-import the narrator card.*
+
+- Settled matters: when the player character plainly answers something others keep pressing ("nothing, none, just a helping hand"), or the player shows they have had enough of a thread, in or out of character, the observer records it as settled. The quote may come from the reply or the player's message.
+- A settled matter triggers a re-plan at once. The planner may not plan openings that press, test or reopen it, and an arc force it answers stops driving openings.
+- The narrator's notes carry a `settled` line, and the card says what it means: closed, no one presses or asks about it again; feelings about it may still show.
+- `/director settle <text>` closes a matter by hand; `/director unsettle` lists and reopens them.
+- `/director redraft`: a fresh arc, spine and plan from where the story stands, for when the story feels stuck. Settled matters cannot come back as forces.
+
 ## Room for slow models (21 Nov 2026)
 
 *Extension only.*
