@@ -2,7 +2,7 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
-# Unreleased
+# 0.2.2 (22 Nov 2026)
 
 ## Two companion presets, Mature and PG (22 Nov 2026)
 

@@ -114,7 +114,7 @@ const card = {
         group_only_greetings: [GROUP_OPENING],
         tags: ['narrator', 'storyteller', 'game master'],
         creator: 'fadust',
-        character_version: '0.2.1',
+        character_version: '0.2.2',
         extensions: {
             talkativeness: '1',
             fav: false,

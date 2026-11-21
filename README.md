@@ -51,7 +51,7 @@ Full steps, including a separate model for the director: [docs/installation.md](
 
 ## Status
 
-Version 0.2.1. 226 unit tests and 30 end-to-end checks pass. The end-to-end checks (`ST_DIR=<SillyTavern checkout> npm run e2e`, needs Playwright) run a real SillyTavern with a scripted stand-in for the models.
+Version 0.2.2. 226 unit tests and 30 end-to-end checks pass. The end-to-end checks (`ST_DIR=<SillyTavern checkout> npm run e2e`, needs Playwright) run a real SillyTavern with a scripted stand-in for the models.
 
 **No real model has been through the test suite yet.** Run the fixture suite on your director model before relying on it: [docs/development.md](docs/development.md#the-fixture-suite).
 

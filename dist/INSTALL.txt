@@ -1,4 +1,4 @@
-Narrator Director 0.2.1 (22 November 2026)
+Narrator Director 0.2.2 (22 November 2026)
 For SillyTavern 1.19.0 or newer, Chat Completion.
 
 What is in this package
