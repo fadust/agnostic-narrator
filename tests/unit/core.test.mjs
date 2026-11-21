@@ -202,7 +202,7 @@ test('the brief carries one intent, never the queue; public variables carry no p
     assert.equal(vars.nar_genre_fantasy, '1');
 });
 
-test('a pre-empted beat triggers a re-plan; an optional beat walked past twice is dropped', async () => {
+test('passing an opening by once keeps the plan; walked past twice it is dropped and a re-plan follows, not within 3 turns of the last', async () => {
     const chat = [narr('The story opens at the gate of Houshan.'), user('x'), narr('Ji Si waits beneath the arch tonight.')];
     let mode = 'untouched';
     const { director, state } = makeHost(chat, {
@@ -212,9 +212,15 @@ test('a pre-empted beat triggers a re-plan; an optional beat walked past twice i
     const plans = () => state.calls.filter(c => c.module === 'planner').length;
     const before = plans();
     mode = 'preempted';
-    chat.push(user('I leave the city instead.'), narr('The road north is empty and cold tonight.'));
-    await director.kick();
-    assert.ok(plans() > before, 'planner re-ran after the deviation');
+    const turn = async (text) => { chat.push(user('I go my own way.'), narr(text)); await director.kick(); };
+    await turn('The road north is empty and cold tonight.');
+    assert.equal(plans(), before, 'one pass-by: the plan stands (live, 21 Nov 2026)');
+    await turn('Snow lies on the road north tonight.');
+    const dropped = director.view().beats.filter(b => b.status === 'skipped').length;
+    assert.ok(dropped >= 1, 'walked past twice: dropped');
+    mode = 'untouched';
+    for (let k = 0; k < 3 && plans() === before; k++) await turn(`The road bends west, mile ${k}.`);
+    assert.ok(plans() > before, 'the dropped opening brings a re-plan once 3 turns have passed since the last');
 });
 
 test('beat rotation: never three pressure beats in a row', () => {

@@ -2,6 +2,15 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+## Fixes from the group play-test (21 Nov 2026)
+
+*Extension only.*
+
+- Fewer planner calls: passing an opening by once no longer re-plans (8 of 11 plans in a 13-turn test came from that). An opening walked past twice is dropped, and the re-plan comes no sooner than 3 turns after the last plan, unless only one opening is left.
+- Quotes: a quote of 6 or more words still matches when the observer swapped up to two names for pronouns or possessives ("Her left hand" for "Elizabeth's left hand"); every other word must match in order. The record keeps the reply's own wording. A crushed hand was refused before and never became a condition.
+- Threads: the observer's prompt says which list each id comes from, and always shows Open threads (or "none"). A clue or unconfirmed-fact id sent under threads is filed where it belongs instead of refused.
+- Story notes for stats: someone described by role before giving a name ("the guard … a slab of a man", then "**Guard:** … Berolt") now has that description in their notes, so their stats follow it.
+
 ## Installs from GitHub
 
 *Extension only, no behaviour change.* The extension's files now sit at the repo root, so SillyTavern's **Install extension** takes `https://github.com/fadust/agnostic-narrator` directly. A copy installed by hand keeps working; to switch, remove the old `narrator-director` folder and install from the URL.

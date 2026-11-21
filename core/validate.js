@@ -7,7 +7,7 @@ import {
 } from './enums.js';
 import { FACT_KIND_WEIGHT } from './enums.js';
 import { READINGS } from './spine.js';
-import { looksLikeName, normalise, quoteMatches } from './text.js';
+import { looksLikeName, matchQuote, normalise, quoteMatches } from './text.js';
 import { arr, isBlank, isObj, nameKey, similarity, str } from './util.js';
 
 const PLAYER_ALIASES = /^(the )?(player|player character|user|pc|protagonist|you|\{\{user\}\})$/;
@@ -35,6 +35,12 @@ export function validateObservation(raw, ctx) {
     const reject = (kind, reason, item) => rejected.push({ kind, reason, item });
     const hay = normalise(ctx.text);
     const quoted = (q) => quoteMatches(q, ctx.text, hay);
+    /** The item with its quote in the reply's own words when the match was lenient (a name/pronoun swap). */
+    const ownWords = (it) => {
+        if (!isObj(it) || typeof it.quote !== 'string') return it;
+        const q = matchQuote(it.quote, ctx.text, hay);
+        return q && q !== it.quote ? { ...it, quote: q } : it;
+    };
     const names = new Map(arr(ctx.names).map(n => [nameKey(n), n]));
     // Models write "the player", a first name, or a title plus surname. All of those are the same person.
     const resolve = (n) => {
@@ -89,7 +95,7 @@ export function validateObservation(raw, ctx) {
         for (const item of list) {
             if (!isObj(item)) { reject(key, 'not an object', item); continue; }
             if (delta[key].length >= cap) { reject(key, 'over the per-reply cap', item); continue; }
-            const out = fn(item);
+            const out = fn(ownWords(item));
             if (typeof out === 'string') reject(key, out, item);
             else if (out) { delta[key].push(out); accepted++; }
         }
@@ -115,7 +121,7 @@ export function validateObservation(raw, ctx) {
     if (isObj(raw.scene)) {
         const s = raw.scene;
         for (const field of ['location', 'time']) {
-            const f = s[field];
+            const f = ownWords(s[field]);
             if (!isObj(f) || isBlank(f.value)) continue;
             // Established flags: a place or time counts only when the narration states it.
             if (!quoted(f.quote)) { reject('scene', `${field}: quote not in the reply`, f); continue; }
@@ -220,6 +226,7 @@ export function validateObservation(raw, ctx) {
         };
     });
 
+    const misfiledClues = [];
     each('threads', CAPS.threads, (it) => {
         if (!THREAD_OPS.includes(it.op)) return 'unknown op';
         if (!quoted(it.quote)) return 'quote not in the reply';
@@ -227,7 +234,15 @@ export function validateObservation(raw, ctx) {
             const text = str(it.text, 200);
             return text ? { op: 'open', text, quote: str(it.quote) } : 'empty thread';
         }
-        if (!arr(ctx.threadIds).includes(it.id)) return 'unknown thread id';
+        if (!arr(ctx.threadIds).includes(it.id)) {
+            // A misfiled id (live, 21 Nov 2026): a clue or unconfirmed-fact id sent under threads goes where it belongs.
+            if (arr(ctx.clueIds).includes(it.id)) { misfiledClues.push(it.id); return null; }
+            if (arr(ctx.uncertainIds).includes(it.id)) {
+                if (!delta.confirmed.some(c => c.id === it.id)) { delta.confirmed.push({ id: it.id, quote: str(it.quote) }); accepted++; }
+                return null;
+            }
+            return 'unknown thread id';
+        }
         return { op: it.op, id: it.id, text: str(it.text, 200), quote: str(it.quote) };
     });
 
@@ -258,6 +273,7 @@ export function validateObservation(raw, ctx) {
             else reject('direction', 'clue was not on offer', id);
         }
     }
+    for (const id of misfiledClues) if (!delta.direction.clues_found.includes(id)) delta.direction.clues_found.push(id);
 
     return { delta, rejected, accepted };
 }
@@ -407,7 +423,12 @@ export function validateTracking(raw, ctx) {
 export function aroundQuote(text, quote, pad = 200) {
     const hay = String(text ?? '');
     const q = String(quote ?? '').trim();
-    const at = q ? hay.toLowerCase().indexOf(q.slice(0, 24).toLowerCase()) : -1;
+    let at = q ? hay.toLowerCase().indexOf(q.slice(0, 24).toLowerCase()) : -1;
+    // A quote matched with a name/pronoun swap: find the reply's own wording of it.
+    if (at === -1 && q) {
+        const own = matchQuote(q, hay);
+        at = own ? hay.indexOf(own) : -1;
+    }
     if (at === -1) return q;
     return hay.slice(Math.max(0, at - pad), at + q.length + pad).replace(/\s+/g, ' ').trim();
 }

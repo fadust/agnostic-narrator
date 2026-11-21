@@ -111,3 +111,14 @@ test('stats grow and decline with the story: small steps for practice or disuse,
     assert.equal(s.cast.Janus.stats.agility, 62, 'a maiming: a large step down');
     assert.equal(s.cast.Janus.stats.strength, 32);
 });
+
+test('a character described by role before they give their name: the role sentences are evidence (live, 21 Nov 2026)', async () => {
+    const { storyCards } = await import('../../core/director.js');
+    const s = initialState({ player: 'Max' });
+    s.cast = { Berolt: {}, Max: { pc: true } };
+    const reply = 'The herb seller is small and sharp-eyed; the guard beside her stall is a slab of a man in baron\'s colors, leaning on a spear.\n\n**Guard:** Laughs, once. "Berolt. Watch, second bell."';
+    const [card] = storyCards(s, [narr(reply)], { strip: [] }, []);
+    assert.match(card.text, /slab of a man/);
+    const other = storyCards(s, [narr('A guard yawns at the gate.'), narr(reply)], { strip: [] }, []);
+    assert.doesNotMatch(other[0].text, /yawns/, 'the label word counts only in the reply that names them');
+});

@@ -59,7 +59,17 @@ export function storyCards(state, chat, narrator, entries, cap = 1800) {
     for (const [name, c] of Object.entries(state.cast ?? {})) {
         if (c.stats || c.pc || name === state.meta?.player || fromCards.has(name) || lore.has(name) || state.cards?.[name]) continue;
         const key = words(name);
-        const sentences = texts.flatMap(t => String(t).split(/(?<=[.!?…"”*])\s+/)).filter(s => words(s).includes(key));
+        const sentences = [];
+        for (const t of texts) {
+            const split = String(t).split(/(?<=[.!?…"”*])\s+/);
+            // Someone is often described by their role before they give a name ("the guard beside her stall is a slab of
+            // a man", then "**Guard:** ... \"Berolt.\"", live 21 Nov 2026). In a reply that names them under a speaker
+            // label, sentences using that label's word count as about them too.
+            const aliases = [...String(t).matchAll(/\*\*([^*:\n]{2,30}):\*\*([^\n]*)/g)]
+                .filter(([, label, line]) => words(line).includes(key) && !words(label).includes(key))
+                .map(([, label]) => words(label.replace(/^(the|a|an)\s+/i, '')));
+            sentences.push(...split.filter(s => words(s).includes(key) || aliases.some(a => a.trim() && words(s).includes(a))));
+        }
         if (!sentences.length) continue;
         const facts = [...arr(state.canon), ...arr(state.uncertain)].map(f => f.fact).filter(f => words(f).includes(key)).slice(0, 8);
         const lines = [

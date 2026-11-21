@@ -31,7 +31,7 @@ Rules:
 7. Lore drafts are for things that will matter again: a named person, place, item, a decisive event, or a change to the world. One or two sentences, written as current fact. Never plans, intentions or beliefs.
 8. Presence: keep everyone listed under "Scene before the REPLY" unless the REPLY shows them leaving. Someone who leaves, or is left behind, goes in cast_changes as "departed" with a quote; silence is not departure.
 9. A contradiction is when the REPLY plainly conflicts with a line under Established facts, or with a character's recorded condition or abilities (a dead character speaking, a slower runner catching a faster one with no stated reason). Give a one-line "correction" the narrator can apply next turn. A correction overrides the story, so be certain: a character may have learned something off-stage, changed their mind or lied. When in doubt, leave the list empty.
-10. "secret": true only when the REPLY shows someone deliberately keeping the fact from another character. "beliefs" are for a character shown believing something, above all something mistaken. A thread is an unresolved question, promise or danger the story has raised; open one only when the REPLY raises it.
+10. "secret": true only when the REPLY shows someone deliberately keeping the fact from another character. "beliefs" are for a character shown believing something, above all something mistaken. A thread is an unresolved question, promise or danger the story has raised; open one only when the REPLY raises it. To advance or resolve a thread, copy its id from the Open threads list: thread ids start with "t-". Ids from Unconfirmed belong only in "confirmed", clue ids only in "clues_found"; neither ever goes in "threads". When Open threads lists none, a thread can only be opened.
 11. Text in brackets that speaks to the player out of character is not narration. Record nothing from it.
 12. A fact is worth recording only if the story could turn on it later: who someone is, what they know, want, decided, promised, owe, hold or lost, an injury, a revelation, a lasting change to a person, place or thing. Restatements of Established facts are not facts. Name each fact's "kind" from this list: ${FACT_KINDS.map(([k, , m]) => `${k} (${m})`).join('; ')}. A gesture, glance, posture or piece of scenery is not worth recording; if you are unsure, choose the kind honestly: code decides what to keep. Most replies give one to three facts, often none.
 
@@ -48,7 +48,7 @@ Shape (all sections optional except summary):
   "relationships": [{"who": "", "toward": "", "axis": "${list(AXES)}", "dir": "up | down", "weight": "minor | major", "category": "${list(EVIDENCE)}", "quote": ""}],
   "stats": [{"who": "", "stat": "${list(STATS)}", "dir": "up | down", "size": "small | large", "quote": ""}],
   "statuses": [{"who": "", "op": "add | treat | worsen | clear", "status": "injury, poison, exhaustion, fear ...", "severity": "${list(SEVERITY)}", "affects": "one stat or null", "quote": ""}],
-  "threads": [{"op": "open | advance | resolve", "id": "for advance and resolve", "text": "", "quote": ""}],
+  "threads": [{"op": "open | advance | resolve", "id": "advance and resolve only: a t- id from Open threads", "text": "", "quote": ""}],
   "lore": [{"keys": ["names that should recall this"], "text": "", "kind": "${list(LORE_KINDS)}", "supersedes": "a key of older lore this replaces, or null", "quote": ""}],
   "contradictions": [{"quote": "", "conflicts_with": "", "correction": ""}],
   "direction": {"beat": "${list(BEAT_PROGRESS)}", "clues_found": ["ids"]}
@@ -148,14 +148,15 @@ export function observerPrompt({ state, reply, playerMessage, offered }) {
     const notes = beat ? [
         `scene intent: ${opening}${beat.precondition ? ` (only if: ${beat.precondition})` : ''}`,
         ...(goal && goal !== opening ? [`goal (judge "direction" by this; the narrator was not shown it): ${goal}`] : []),
-        ...clues.map(c => `clue on offer: ${c}`),
+        ...clues.map(c => `clue on offer (its id is for "clues_found" only): ${c}`),
     ] : [];
     const user = [
         section('Characters', bullets(chars.length ? chars : ['none recorded yet'])),
         section('Scene before the REPLY', bullets(scene)),
         section('Established facts', canon.length ? bullets(canon) : 'none yet'),
-        section('Unconfirmed', uncertain.length ? bullets(uncertain) : ''),
-        section('Open threads', threads.length ? bullets(threads) : ''),
+        section('Unconfirmed (ids for "confirmed" only, never "threads")', uncertain.length ? bullets(uncertain) : ''),
+        // Always shown, so an empty list reads as "no thread to advance", not as license to borrow another id.
+        section('Open threads (the only ids "threads" may advance or resolve)', threads.length ? bullets(threads) : 'none: a thread can only be opened'),
         section('Things that did NOT happen (never record these)', state.tombstones.length ? bullets(state.tombstones.slice(-10).map(t => t.fact)) : ''),
         section('Notes the narrator was given (for "direction" only)', notes.length ? bullets(notes) : 'none'),
         section('The player\'s message (context only, never a source of facts)', playerMessage || '(none)'),

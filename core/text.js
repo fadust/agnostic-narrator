@@ -70,6 +70,55 @@ const MIN_QUOTE = 5;
  * A quote too short to be evidence is refused unless it is the whole text.
  */
 export function quoteMatches(quote, text, normalisedText = null) {
+    return matchQuote(quote, text, normalisedText) !== '';
+}
+
+// Pronouns and possessives a model may write in place of a name, or the other way round.
+const PRONOUNS = new Set(['he', 'she', 'they', 'him', 'her', 'them', 'his', 'hers', 'their', 'theirs', 'it', 'its',
+    'himself', 'herself', 'themselves', 'itself']);
+// A quote must be this many words long before a name/pronoun swap is forgiven, and at most this many swaps.
+const MIN_LENIENT_WORDS = 6;
+const MAX_SWAPS = 2;
+
+/** Words with their place in the text. "Elizabeth's" and "don't" stay one word. Markup is blanked out. */
+function words(text) {
+    const src = String(text ?? '').normalize('NFKC').replace(/<[^>]{0,80}>/g, m => ' '.repeat(m.length));
+    const out = [];
+    for (const m of src.matchAll(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu)) {
+        const w = m[0].replace(/’/g, "'");
+        out.push({ key: w.toLowerCase(), cap: /^\p{Lu}/u.test(w), start: m.index, end: m.index + m[0].length });
+    }
+    return { src, out };
+}
+
+/** A word that may stand for a person: a pronoun, or a capitalised word (a name, "Elizabeth's"). */
+const personWord = (w) => w.cap || PRONOUNS.has(w.key);
+
+/**
+ * The quote as it should be stored, or '' when it is not in `text`. An exact match keeps the quote as given. Failing
+ * that, a quote of 6+ words still matches when it differs from a run of the reply only by one or two words where one
+ * side is a pronoun and the other a pronoun or name ("Her left hand" for "Elizabeth's left hand"); every other word
+ * must match in order. Then the reply's own wording is returned, so a stored quote is always genuine text.
+ */
+export function matchQuote(quote, text, normalisedText = null) {
+    if (exactMatch(quote, text, normalisedText)) return String(quote ?? '');
+    const q = words(quote).out;
+    const { src, out: t } = words(text);
+    if (q.length < MIN_LENIENT_WORDS || /\.{3,}|…/.test(String(quote ?? ''))) return '';
+    for (let i = 0; i + q.length <= t.length; i++) {
+        let swaps = 0;
+        for (let j = 0; j < q.length && swaps <= MAX_SWAPS; j++) {
+            const a = q[j], b = t[i + j];
+            if (a.key === b.key) continue;
+            const pronounSwap = (PRONOUNS.has(a.key) || PRONOUNS.has(b.key)) && personWord(a) && personWord(b);
+            swaps += pronounSwap ? 1 : MAX_SWAPS + 1;
+        }
+        if (swaps <= MAX_SWAPS) return src.slice(t[i].start, t[i + q.length - 1].end);
+    }
+    return '';
+}
+
+function exactMatch(quote, text, normalisedText) {
     const hay = normalisedText ?? normalise(text);
     const parts = String(quote ?? '').split(/\.{3,}|…|\[\.\.\.\]/).map(normalise).filter(Boolean);
     if (!parts.length) return false;

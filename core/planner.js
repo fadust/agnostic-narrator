@@ -254,6 +254,8 @@ function profileOf(raw) {
 /** A player direction asking for a slower, quieter stretch: the stall re-plan waits. */
 const QUIET_RE = /\b(quiet|quieter|slow|slower|calm|calmer|linger|rest|breathe|breather|take (?:it|our|my|their) time|no rush|let it sit)\b/i;
 
+const DEVIATION_GAP = 3;
+
 export function planTrigger(state, cfg = { cadence: 0 }) {
     if (!state.genre) return null;
     if (!state.arc) return 'arc';
@@ -262,7 +264,9 @@ export function planTrigger(state, cfg = { cadence: 0 }) {
     if (!queued) return 'queue empty';
     // Threads running low: the last opening is in use and little is left open. Refill before the queue runs dry.
     if (queued === 1 && awakeThreads(state).length < 2 && m.lastPlanTurn < m.turn) return 'threads running low: plan new openings from what is in play, tied to the cast and the spine';
-    if (m.deviationTurn >= 0 && m.deviationTurn > m.lastPlanTurn) return 'deviation';
+    // A dropped opening re-plans, but not sooner than DEVIATION_GAP turns after the last plan while openings remain:
+    // the next pass-by is often the player still finishing what they chose.
+    if (m.deviationTurn >= 0 && m.deviationTurn > m.lastPlanTurn && (queued <= 1 || m.turn - m.lastPlanTurn >= DEVIATION_GAP)) return 'deviation';
     if (state.instructions.some(i => !i.planned)) return 'player request';
     // Stall: replies in a row that recorded nothing new. A recent player direction asking for quiet wins.
     const stall = Number(cfg.stallAfter ?? m.stallAfter ?? 0);

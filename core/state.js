@@ -468,10 +468,11 @@ export function applyDelta(state, obs, entry) {
             // Three replies moving toward an intent have delivered it, whatever the model calls it.
             if (beat.progress >= 3) { beat.status = 'complete'; beat.completed = mid; state.meta.beatLog.push(beat.type); }
         } else if (dir.beat === 'preempted') {
-            state.meta.deviationTurn = turn;
             beat.preempted = (beat.preempted ?? 0) + 1;
             // Deviation bends the plan: an optional beat the player walked past twice is dropped, never forced back.
-            if (!beat.required && beat.preempted >= 2) beat.status = 'skipped';
+            // Passing an opening by once is the player's choice and leaves the rest of the plan standing: only a dropped
+            // beat asks for a re-plan (live, 21 Nov 2026: a re-plan on every pass-by made 8 of 11 plans in 13 turns).
+            if (!beat.required && beat.preempted >= 2) { beat.status = 'skipped'; state.meta.deviationTurn = turn; }
         }
         // An opening the narrator has been handed turn after turn without it being taken is pressure, not direction.
         // It is retired and the planner is asked to think again: two turns after the nudge (five if required).
