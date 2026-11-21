@@ -200,6 +200,7 @@ export function validateObservation(raw, ctx) {
 
     const axisCount = {};
     const PIVOTAL = ['action', 'sacrifice', 'shared_danger', 'betrayal'];
+    const COSTLY = ['sacrifice', 'shared_danger', 'betrayal'];
     each('relationships', CAPS.relationships, (it) => {
         const who = resolve(it.who);
         const toward = resolve(it.toward ?? ctx.player);
@@ -213,6 +214,8 @@ export function validateObservation(raw, ctx) {
         // step needs a pivotal kind of deed.
         let weight = it.category === 'words' ? 'minor' : it.weight;
         if (weight === 'pivotal' && !PIVOTAL.includes(it.category)) weight = 'major';
+        // A sacrifice, shared danger or betrayal is never a small step (owner, 21 Nov 2026).
+        if (weight === 'minor' && COSTLY.includes(it.category)) weight = 'major';
         const k = `${who}>${toward}:${it.axis}`;
         const step = WEIGHTS[weight];
         if ((axisCount[k] ?? 0) + step > CAPS.axisPerReply) return 'axis already moved the maximum this reply';

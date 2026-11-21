@@ -46,3 +46,13 @@ test('arc, spine and planner put the player character\'s own wants first', () =>
     assert.match(PLAN_RULES, /drives the story, not only serves it/);
     assert.ok(!/what he is after/.test(arc + SPINE_SYSTEM));
 });
+
+// Live, 21 Nov 2026: Max sucked the pus from Elizabeth's wound; the observer quoted her "Don't stop." as words, minor.
+test('the evidence is the cause, and a costly kind of deed is never minor', () => {
+    const sys = observerPrompt({ state: initialState({ player: 'Max' }), reply: 'x', playerMessage: 'y' })[0].content;
+    assert.match(sys, /Judge by the cause, not the reaction/);
+    assert.match(sys, /what caused the change, not how it shows/);
+    const text = 'Max puts himself between her and the cudgel.';
+    const v = validateObservation({ relationships: [rel('shared_danger', 'Max puts himself between her and the cudgel', 'minor')] }, ctx(text));
+    assert.equal(v.delta.relationships[0].weight, 'major');
+});

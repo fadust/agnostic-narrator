@@ -2,6 +2,13 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+## Feelings follow the deed, not the reaction (21 Nov 2026)
+
+*Extension only.*
+
+- The observer judges a feeling change by its cause, usually what the player character did, and quotes the deed. Tending a wound or standing between someone and danger is action or sacrifice and at least major, even when they only answer with a word. In a live run, sucking the pus from a wound was scored as "Don't stop." = words, minor.
+- A sacrifice, shared danger or betrayal is never scored as minor.
+
 ## Settled stays settled, and a redraft button (21 Nov 2026)
 
 *Extension and card: re-import the narrator card.*
