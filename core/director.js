@@ -722,7 +722,7 @@ export class Director {
         const epoch = this.epoch;
         // Agendas (M1) ride in the same call, rooted in the same material; validated against the cast and the material.
         let agendas = [];
-        let value = await this.json('planner', spinePrompt({ material, genre: state.genre, premise: state.premise, arc: state.arc, player: state.meta.player, cast: spineCast(state) }), (raw) => {
+        let value = await this.json('planner', spinePrompt({ material, genre: state.genre, premise: state.premise, arc: state.arc, player: state.meta.player, cast: spineCast(state), settled: arr(state.settled).map(s => s.text), story: force ? [state.summaries.rolled, ...state.summaries.recent.slice(-12).map(s => s.text)].filter(Boolean).join('\n') : '' }), (raw) => {
             const v = validateSpine(raw);
             if (v.ok) agendas = validateAgendas(raw.agendas, state, material);
             return v;

@@ -2,6 +2,19 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+## The price loop (21 Nov 2026)
+
+*Extension only.*
+
+Found live: the story kept returning to "what do you want in return" after the player had answered it. The arc, the spine, the tracker and the characters' wants all carried it, and nothing retired it.
+
+- The planner sees the arc as goal, forces, act and the payoff's hooks still to plant. The arc's own endings stay out; the spine's endings are the live ones.
+- Hooks are planted: a beat names the hook it plants by number, and completing the beat marks it. Before, nothing ever named one, so every hook stayed unplanted and kept being offered.
+- A "toward" reading needs a quote, as "against" does. Unquoted readings had made an ending lead.
+- The motive wording no longer speaks of a price: the cost of a goal is danger, time, loss or temptation, never payment others demand. The spine example no longer turns on a debt.
+- Settled matters reach the tracker (a criterion that needs one reopened is marked failed), the spine drafter (no question, ending, criterion or want may turn on reopening one) and the planner's wants (a want a settled matter answers is renewed) and criteria (never served).
+- `/director redraft` gives the spine drafter the settled list and the story so far, so the new spine starts from where the story stands.
+
 ## Feelings follow the deed, not the reaction (21 Nov 2026)
 
 *Extension only.*

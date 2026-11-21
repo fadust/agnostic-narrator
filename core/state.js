@@ -467,6 +467,10 @@ export function applyDelta(state, obs, entry) {
             beat.status = 'complete';
             beat.completed = mid;
             state.meta.beatLog.push(beat.type);
+            // A completed beat plants the hook it named (found live, 21 Nov 2026: nothing ever named one, so every hook
+            // stayed unplanted and kept being offered to the planner).
+            const hook = arr(state.arc?.payoff?.hooks)[(beat.plants ?? 0) - 1];
+            if (hook) hook.planted = true;
             for (const h of arr(state.arc?.payoff?.hooks)) if (h.beat === beat.id) h.planted = true;
         } else if (dir.beat === 'advanced') {
             beat.progress = (beat.progress ?? 0) + 1;
@@ -522,7 +526,7 @@ function sanitiseBeat(b, id) {
     const goal = text(b.goal) || text(b.intent);
     return {
         id, scene: b.scene ?? '', goal, pressure: text(b.pressure) || goal, intent: goal, precondition: b.precondition ?? '', type: b.type ?? 'pressure',
-        required: !!b.required, status: 'queued', lore: arr(b.lore).slice(0, 3), serves: typeof b.serves === 'string' ? b.serves : '',
+        required: !!b.required, status: 'queued', lore: arr(b.lore).slice(0, 3), serves: typeof b.serves === 'string' ? b.serves : '', plants: Number.isInteger(b.plants) ? b.plants : 0,
         clues: arr(b.clues).slice(0, CAPS.clues).map((c, n) => ({
             id: `${id}-c${n}`, text: c.text ?? '', route: c.route ?? 'place', where: c.where ?? '', found: false,
         })),

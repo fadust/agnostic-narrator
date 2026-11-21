@@ -393,10 +393,12 @@ export function validateTracking(raw, ctx) {
             if (!READINGS.includes(r.reading)) { reject('spine', 'reading: unknown value', r); continue; }
             if (seenEnding.has(r.ending)) { reject('spine', 'reading: ending already read', r); continue; }
             // Turning away from an ending is a decisive moment; it needs the narration to show it.
-            const exchange = r.reading === 'against' ? placeQuote(r.quote, r.exchange) : exchangeOf(r.exchange);
-            if (!exchange) { reject('spine', 'against: quote not in the reply', r); continue; }
+            // So does building toward one (live, 21 Nov 2026: unquoted "toward" readings made an ending lead).
+            const quoted = r.reading !== 'aside';
+            const exchange = quoted ? placeQuote(r.quote, r.exchange) : exchangeOf(r.exchange);
+            if (!exchange) { reject('spine', `${r.reading}: quote not in the reply`, r); continue; }
             seenEnding.add(r.ending);
-            delta.readings.push({ ending: r.ending, reading: r.reading, quote: r.reading === 'against' ? str(r.quote) : '', exchange });
+            delta.readings.push({ ending: r.ending, reading: r.reading, quote: quoted ? str(r.quote) : '', exchange });
             accepted++;
         }
         for (const m of arr(src.marks)) {

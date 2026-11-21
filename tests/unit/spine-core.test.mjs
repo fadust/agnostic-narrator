@@ -236,7 +236,7 @@ async function overlapWith(profiles) {
     const call = host.call;
     host.call = async (module, messages, ...rest) => {
         if (module === 'planner' && messages[0].content.startsWith(SPINE_SYSTEM)) return JSON.stringify({ question: 'q', endings: [{ title: 'Throne', criteria: ['loyalists rallied'] }, { title: 'Marriage', criteria: ['the daughter trusts him'] }], milestones: [{ title: 'Allies', criteria: ['the commander stands with him'] }] });
-        if (module === 'tracker') { trackerStarted(); return JSON.stringify({ readings: [{ ending: 'e1', reading: 'toward' }] }); }
+        if (module === 'tracker') { trackerStarted(); return JSON.stringify({ readings: [{ ending: 'e1', reading: 'toward', quote: 'Ser Corwin trains him in the yard' }] }); }
         return call(module, messages, ...rest);
     };
     await director.kick();
@@ -259,7 +259,7 @@ test('the observer and the tracker run side by side on different profiles, and i
 
 test('a check on request reads what waits at once, the newest reply included', async () => {
     const chat = [narr('The story opens at the gate of the noble house.'), user('I report for work.')];
-    const { director, calls } = await spinedDirector(chat, { trackEvery: 4 }, () => ({ readings: [{ ending: 'e1', reading: 'toward' }] }));
+    const { director, calls } = await spinedDirector(chat, { trackEvery: 4 }, () => ({ readings: [{ ending: 'e1', reading: 'toward', quote: 'Ser Corwin watches him train in the yard' }] }));
     chat.push(narr('Ser Corwin watches him train in the yard.'));
     await director.kick();
     assert.equal(calls.length, 0, 'not answered yet, and fewer than N');

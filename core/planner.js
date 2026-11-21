@@ -98,6 +98,7 @@ export function validatePlan(raw, state) {
             text: clip(c.text, 200), route: pick(c.route, CLUE_ROUTES, 'place'), where: str(c.where, 80),
         })).filter(c => c.text),
         serves: servesOf(b.serves, state),
+        plants: plantsOf(b.plants, state),
     })).filter(b => b.goal).slice(0, CAPS.beats);
     if (!beats.length) return { ok: false, error: 'no usable beats' };
     beats = rotate(beats, arr(state?.meta?.beatLog));
@@ -127,6 +128,13 @@ export function validatePlan(raw, state) {
             agendas: state ? validateRenewals(raw.agendas, state) : [],
         },
     };
+}
+
+/** A beat may name, by number, a payoff hook it plants that is not planted yet. Anything else is dropped. */
+function plantsOf(n, state) {
+    const k = Number(n);
+    const h = arr(state?.arc?.payoff?.hooks)[k - 1];
+    return Number.isInteger(k) && h && !h.planted ? k : 0;
 }
 
 /** A beat may name the open spine criterion it serves. Anything else is dropped. */

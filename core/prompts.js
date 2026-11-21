@@ -76,7 +76,7 @@ Spine rules:
 - Give "exchange", the number of the exchange that shows it, for every "toward", "against", mark and "happened"; its quote must come from that exchange's REPLY.
 
 ${JSON_ONLY}
-{"readings": [{"ending": "id", "reading": "${list(READINGS)}", "exchange": 1, "quote": "required for against"}], "marks": [{"id": "criterion id", "mark": "met | failed", "evidence": "occurred | shown | implied", "exchange": 1, "quote": "", "by": "who speaks or acts in the quote", "also": {"exchange": 2, "quote": ""}, "reason": "failed only: why it can never become true"}], "happened": [{"milestone": "id", "exchange": 1, "quote": "", "by": ""}]}`;
+{"readings": [{"ending": "id", "reading": "${list(READINGS)}", "exchange": 1, "quote": "required for toward and against"}], "marks": [{"id": "criterion id", "mark": "met | failed", "evidence": "occurred | shown | implied", "exchange": 1, "quote": "", "by": "who speaks or acts in the quote", "also": {"exchange": 2, "quote": ""}, "reason": "failed only: why it can never become true"}], "happened": [{"milestone": "id", "exchange": 1, "quote": "", "by": ""}]}`;
 
 /**
  * Tracker slice: ending titles and open criteria, the first open milestones' open criteria, and the batch of exchanges
@@ -95,6 +95,7 @@ export function trackerPrompt({ state, exchanges, reply, playerMessage }) {
         sv?.endings.length ? section('Endings (one reading for each)', sv.endings.map(e => `- ${e.id}: ${e.title}`).join('\n')) : '',
         sv?.milestones.length ? section('Milestones in progress', sv.milestones.map(m => `- ${m.id}: ${m.title}`).join('\n')) : '',
         groups.length ? section('Open criteria (mark only those an exchange settles; most exchanges settle none)', groups.map(([title, it]) => `${title}:\n${crit(it)}`).join('\n')) : '',
+        arr(state.settled).length ? section('Settled by the player (closed: a criterion that needs one reopened can never be met; mark it failed, reason "settled")', bullets(state.settled.map(s => s.text))) : '',
         ...list.map((x, n) => `## EXCHANGE ${n + 1}\n### PLAYER'S MESSAGE\n${x.player || '(none)'}\n### REPLY\n${x.reply ?? ''}\n`),
     ].join('\n');
     return [{ role: 'system', content: TRACKER_SYSTEM }, { role: 'user', content: user }];
@@ -278,15 +279,15 @@ One entry per person, each with the fields above. People only mentioned in their
 }
 
 /** Shared by the arc and the spine: goals are human, with something at stake for the player character (owner, 21 Nov 2026). */
-export const MOTIVE = `Motive: a person, not a saint. The goal comes from the player character's own wants: survival, money, status, freedom, desire, love, revenge, pride, fear. Helping someone may be part of it, as a means, a price or a want of their own, but the goal must also hold something the player character gains or keeps for themselves, and it costs or tempts them. A purely selfless aim (only to help, protect or save someone) only when the card or the player's own messages show that motive.`;
+export const MOTIVE = `Motive: a person, not a saint. The goal comes from the player character's own wants: survival, money, status, freedom, desire, love, revenge, pride, fear. Helping someone may be part of it, as a means or a want of their own, but the goal must also hold something the player character gains or keeps for themselves, and pursuing it risks or tempts them. The cost is danger, time, loss or temptation, never payment others demand of them. A purely selfless aim (only to help, protect or save someone) only when the card or the player's own messages show that motive.`;
 
 // ---------------------------------------------------------------- planner
 
 export const PLAN_RULES = `Planning rules:
 - Plan possibilities, not a script. The plan is a ride the player may jump on or not. A beat is an opening the world offers, with a precondition ("if the player enters the city, the moneylender's men are watching the gate"), never an event that happens regardless of what the player does. Passing an opening by is a valid choice, never something to correct. Never decide the player character's actions, words or feelings.
 - The player's choices come first. If the story has moved away from the old plan, follow the story.
-- Settled matters are closed. Never plan an opening that presses, tests or reopens one, or has someone ask again; a force or want that a settled matter answers no longer drives openings. People may still feel about it; the story moves to something new.
-- The player character drives the story, not only serves it. Besides other people's needs, each plan offers at least one opening toward the player character's own goal: a chance to gain, win or take something for themselves, at a price.
+- Settled matters are closed. Never plan an opening that presses, tests or reopens one, or has someone ask again; a force or want that a settled matter answers no longer drives openings. Never serve a spine criterion that a settled matter closes. A want that a settled matter answers counts as transformed: give that character new wants under "agendas", with "why". People may still feel about it; the story moves to something new.
+- The player character drives the story, not only serves it. Besides other people's needs, each plan offers at least one opening toward the player character's own goal: a chance to gain, win or take something for themselves, at some risk.
 - Characters marked "main cast" are the story's core, chosen by the player. Keep them at the centre of the plan and give each a part in where the story goes; other characters take smaller roles.
 - Keep a short horizon: at most ${CAPS.scenes} scenes and ${CAPS.beats} beats. Mark a beat "required" only if the arc cannot work without it.
 - Vary beat types (${BEAT_TYPES.join(', ')}). After two pressure beats the next is anything but pressure.
@@ -391,6 +392,23 @@ function spineSection(state) {
     return out.join('\n');
 }
 
+/**
+ * The arc as the planner sees it (owner, 21 Nov 2026): goal, forces, act and the payoff's hooks still to plant, each
+ * numbered for a beat's "plants". The arc's own endings stay out: the spine's endings are the live ones, and the old
+ * ones kept steering plans long after the story had moved on.
+ */
+function arcForPlanner(arc) {
+    if (!arc) return '';
+    const hooks = arr(arc.payoff?.hooks).map((h, n) => ({ n: n + 1, ...h })).filter(h => !h.planted).map(h => `${h.n}. ${h.text}`);
+    return bullets([
+        `goal: ${arc.goal}`,
+        ...arr(arc.forces).map(f => `force: ${f}`),
+        `act ${arc.act ?? 1} of ${arc.acts ?? 3}, tension ${arc.tension ?? 'low'}`,
+        ...(arc.payoff?.name ? [`payoff (act ${arc.payoff.act ?? 3}): ${arc.payoff.name}`] : []),
+        ...(hooks.length ? [`hooks still to plant: ${hooks.join('; ')}`] : []),
+    ]);
+}
+
 function planContextParts(state, g, cast, done, queued, threads, story, loreKeys) {
     return [
         section('Story profile', bullets([
@@ -398,7 +416,7 @@ function planContextParts(state, g, cast, done, queued, threads, story, loreKeys
             `stakes: ${g.stakes}`, `lethality: ${g.lethality}`, `rating: ${g.pg ? 'PG. Plan nothing that needs explicit sex or graphic violence to work' : 'mature'}`, `explicit sexual content: ${g.explicit ? 'allowed between adults, where the characters and the story lead there' : 'no; fade to black'}`, `promises: ${arr(g.promises).join('; ')}`, `avoid: ${arr(g.avoid).join('; ')}`,
         ])),
         section('Premise', state.premise),
-        section('Arc', state.arc ? JSON.stringify(state.arc) : ''),
+        section('Arc', arcForPlanner(state.arc)),
         section('Story spine', spineSection(state)),
         story,
         section('Scene now', bullets([
@@ -452,7 +470,7 @@ ${JSON_ONLY}
 {
   "agendas": [{"who": "only a character with no wants yet, or whose wants the story has transformed; otherwise omit", "wants": ["one to three lasting wants, a few words each"], "why": "only when changing a character's wants: what happened"}],
   "scenes": [{"id": "s1", "purpose": "", "if_unchallenged": ["what happens next if nobody intervenes"], "choice_points": [""], "focus": {"Character name": "emotional target"}}],
-  "beats": [{"scene": "s1", "goal": "what counts as the beat landing", "pressure": "the opening the world offers now, and how it reaches the player", "precondition": "", "type": "${list(BEAT_TYPES)}", "required": false, "lore": [], "clues": [{"text": "", "route": "${list(CLUE_ROUTES)}", "where": ""}], "serves": "id of the open spine criterion this beat serves, or empty"}],
+  "beats": [{"scene": "s1", "goal": "what counts as the beat landing", "pressure": "the opening the world offers now, and how it reaches the player", "precondition": "", "type": "${list(BEAT_TYPES)}", "required": false, "lore": [], "clues": [{"text": "", "route": "${list(CLUE_ROUTES)}", "where": ""}], "serves": "id of the open spine criterion this beat serves, or empty", "plants": "number of the payoff hook this beat plants, or empty"}],
   "act": "the current act number; raise it by one only at a real act boundary",
   "tension": "${list(ARC_TENSION)}",
   "outcomes": ["optional, at most two, and only when the story needs it: something that happened off-screen, away from the player, stated as who, what and the result, in words not numbers. Never something that involves the player character"],
@@ -477,7 +495,7 @@ export const SPINE_SYSTEM = `You draft the spine of an interactive story from it
 - Milestones: three to five turning points the story is likely to pass through on the way to any answer ("learns who ordered the killing", "gains a first true ally"). Each changes the player's situation or which answers are still possible. A moment inside one scene (a first meeting, a look, someone sitting down, a scar noticed) is never a milestone. One milestone may feed several endings.
 - The current scene is already in motion: milestone 1 starts after it, never inside it.
 - Write each milestone, and each criterion, as what has already happened or become true on screen, so it can be recognised afterwards; it may come about in many different ways. Never a tally of many scenes ("has completed its first patrols"), never a chain of separate events joined by "and".
-- Good milestone: {"title": "Wins a protector inside the house", "criteria": [{"text": "the steward owes him his life", "role": "a debt that opens the house to him", "lasting": true}]}. Bad: {"title": "The Auction Block", "criteria": ["Elsa has made eye contact with him"]} (the current scene, and a gesture).
+- Good milestone: {"title": "Wins a protector inside the house", "criteria": [{"text": "the steward has sworn to stand by him", "role": "an ally who opens the house to him", "lasting": true}]}. Bad: {"title": "The Auction Block", "criteria": ["Elsa has made eye contact with him"]} (the current scene, and a gesture).
 - Criteria: two to four for each ending and each milestone, each an objective: a concrete state that must be true for that ending or milestone to stand. Who knows what; who trusts, owes, fears, serves or opposes whom; what is held, lost, revealed or decided; where someone stands. Concrete enough to tell when it has become true, but never bound to a particular action, gesture, scene, time of day or order of events, so the player can reach it in their own way. Name who where it matters, so that one failing does not close the whole route ("the head of House Aldren backs his claim", not "the nobles like him").
 - Each criterion has a "role": what it contributes to its ending or milestone, in a few words. A criterion with no real role in the story is left out; fewer, weightier criteria are better.
 - "lasting": true when a criterion names a lasting state between people (trust, loyalty, a debt, an alliance), otherwise false.
@@ -490,7 +508,7 @@ export const AGENDA_RULES = `Wants ("agendas"): for each character the setup nam
 - Use names exactly as the setup spells them. Leave out anyone the setup gives no want of their own.`;
 
 /** Spine slice: the story material as authored, the profile, premise and arc. Drafted once, then validated. */
-export function spinePrompt({ material, genre, premise, arc, player, cast = [] }) {
+export function spinePrompt({ material, genre, premise, arc, player, cast = [], settled = [], story = '' }) {
     return [
         {
             role: 'system',
@@ -513,6 +531,8 @@ ${JSON_ONLY}
                 section('Arc', arc ? JSON.stringify({ goal: arc.goal, forces: arc.forces, endings: arr(arc.endings).map(e => e.title) }) : ''),
                 section('Player character', player),
                 section('Characters, most important first (main cast, then those most present)', arr(cast).length ? bullets(cast) : ''),
+                section('Story so far (a redraft: build from where it stands)', story),
+                section('Settled by the player (closed: no question, ending, criterion or want may turn on reopening one)', arr(settled).length ? bullets(settled) : ''),
                 section('Story material', material),
             ].join('\n'),
         },

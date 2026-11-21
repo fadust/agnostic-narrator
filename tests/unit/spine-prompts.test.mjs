@@ -102,7 +102,8 @@ test('spine and conclusion prompts carry their inputs', () => {
     assert.ok(c[1].content.includes('achieved: Ser Corwin stands with him') && c[1].content.includes('failed: the daughter trusts him') && c[1].content.includes('"Corwin knelt"'));
 });
 
-test('the validator keeps spine findings only for ids on offer, with quotes; "against" needs a quote', () => {
+test('the validator keeps spine findings only for ids on offer, with quotes; "toward" and "against" need a quote', () => {
+    assert.equal(validateTracking({ readings: [{ ending: 'e1', reading: 'toward' }] }, { text: 'Ser Corwin stands with him.', spine: spineIds(spineState()) }).delta.readings.length, 0, 'an unquoted toward is refused (live, 21 Nov 2026)');
     const s = spineState();
     const text = 'Ser Corwin stands with him at the gate. Rowan tears up the letter from the loyalists and burns it.';
     const v = validateTracking({
@@ -126,9 +127,9 @@ test('the validator keeps spine findings only for ids on offer, with quotes; "ag
     assert.deepEqual(v.delta.marks, [{ id: 'm1-c1', mark: 'met', quote: 'Ser Corwin stands with him', exchange: 1, evidence: 'shown' }]);
     assert.deepEqual(v.delta.happened.map(h => h.milestone), ['m1']);
     assert.equal(v.rejected.filter(r => r.kind === 'spine').length, 7, 'three readings, three marks, one milestone refused');
-    const flat = validateTracking({ readings: [{ ending: 'e1', reading: 'toward' }] }, { text, spine: spineIds(s) });
+    const flat = validateTracking({ readings: [{ ending: 'e1', reading: 'toward', quote: 'Ser Corwin stands with him' }] }, { text, spine: spineIds(s) });
     assert.equal(flat.delta.readings.length, 1, 'the answer without a wrapping "spine" key is read too');
-    const none = validateTracking({ readings: [{ ending: 'e1', reading: 'toward' }] }, { text });
+    const none = validateTracking({ readings: [{ ending: 'e1', reading: 'toward', quote: 'Ser Corwin stands with him' }] }, { text });
     assert.equal(none.delta.readings.length, 0, 'no spine on offer: nothing accepted');
     assert.ok(validateObservation({ summary: 's', spine: {} }, { text, names: [], player: 'Rowan' }).rejected.some(r => r.reason === 'unknown key "spine"'), 'the observer no longer answers for the spine');
 });
