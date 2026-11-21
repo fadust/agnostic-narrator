@@ -11,5 +11,8 @@
     "fixtures": "node tools/fixtures.mjs",
     "e2e": "node tests/e2e/run.mjs",
     "docs": "node tools/rules.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.65.1"
   }
 }

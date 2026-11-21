@@ -4,7 +4,7 @@
 // the acceptance checks that need the real platform (prompt assembly, World Info, swipes, groups).
 
 import { spawn } from 'node:child_process';
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -49,6 +49,11 @@ const st = JSON.parse(readFileSync(settingsPath, 'utf8'));
 Object.assign(st, { firstRun: false, main_api: 'openai', username: 'Rowan' });
 Object.assign(st.oai_settings, { chat_completion_source: 'custom', custom_url: `http://127.0.0.1:${MOCK}/v1`, custom_model: 'mock', stream_openai: false });
 st.power_user.auto_connect = true;
+// Other third-party extensions in the checkout (modals, themes, input helpers) would get in the way: run with ours alone.
+const thirdParty = join(ST, 'public/scripts/extensions/third-party');
+st.extension_settings ??= {};
+st.extension_settings.disabledExtensions = readdirSync(thirdParty, { withFileTypes: true })
+    .filter(d => d.isDirectory() && d.name !== 'narrator-director').map(d => `third-party/${d.name}`);
 writeFileSync(settingsPath, JSON.stringify(st));
 server = startServer();
 await up();
