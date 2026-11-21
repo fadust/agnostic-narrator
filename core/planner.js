@@ -264,6 +264,9 @@ const QUIET_RE = /\b(quiet|quieter|slow|slower|calm|calmer|linger|rest|breathe|b
 
 const DEVIATION_GAP = 3;
 
+/** The queued openings' words, for telling who a plan centres on. */
+export const queuedBeatText = (state) => arr(state.beats).filter(b => b.status === 'queued').map(b => `${b.goal ?? ''} ${b.intent ?? ''} ${b.pressure ?? ''}`).join(' ');
+
 export function planTrigger(state, cfg = { cadence: 0 }) {
     if (!state.genre) return null;
     if (!state.arc) return 'arc';

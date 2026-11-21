@@ -4,7 +4,7 @@ import { buildBrief } from './brief.js';
 import { extractJson } from './json.js';
 import { buildLorebook } from './lore.js';
 import { memoryMode, plannerMemory } from './memory.js';
-import { applyRating, planTrigger, validateArc, validateConclusion, validateGenre, validatePlan, validateProfile, validateSpine, validateSpineRewrites } from './planner.js';
+import { applyRating, planTrigger, queuedBeatText, validateArc, validateConclusion, validateGenre, validatePlan, validateProfile, validateSpine, validateSpineRewrites } from './planner.js';
 import { arcPrompt, cleanupPrompt, conclusionPrompt, genrePrompt, observerPrompt, planPrompt, profilePrompt, spineCheckPrompt, spinePrompt, summariserPrompt, trackCheckPrompt, trackerPrompt } from './prompts.js';
 import { applySpineRewrites, emptySpine, findCriterion, flagSpine, needsConclusion, spineIds, spineTrigger } from './spine.js';
 import { castPeople, ensureCast, logOp, reconcile, replay, scan, visibleText } from './state.js';
@@ -416,7 +416,7 @@ export class Director {
             const names = [...Object.keys(before.cast), before.meta.player].filter(Boolean);
             const v = validateObservation(parsed.value, {
                 text: entry.text, names, tombstones: before.tombstones, present: before.scene.present,
-                planned: before.beats.filter(b => b.status === 'queued').map(b => `${b.goal ?? ''} ${b.intent ?? ''} ${b.pressure ?? ''}`).join(' '),
+                planned: queuedBeatText(before),
                 aliases: Object.fromEntries(Object.entries(before.cast).flatMap(([n, c]) => arr(c.aliases).map(a => [a, n]))),
                 uncertainIds: before.uncertain.map(u => u.id), threadIds: before.threads.map(t => t.id),
                 clueIds: offered.clues, player: before.meta.player, playerMessage,
@@ -720,10 +720,6 @@ export class Director {
     }
 
     /**
-     * The spine is drafted once, after the arc, from the same story material as the genre profile.
-     * `force` redrafts it (from /director spine), replacing the current one as a player edit.
-     */
-    /**
      * The player's safety valve (owner, 21 Nov 2026): a fresh arc from where the story stands, then a fresh spine and
      * plan. Logged as player edits, so the old arc and spine are replaced, not merged. True when the arc was written.
      */
@@ -744,6 +740,10 @@ export class Director {
         return true;
     }
 
+    /**
+     * The spine is drafted once, after the arc, from the same story material as the genre profile.
+     * `force` redrafts it (from /director spine), replacing the current one as a player edit.
+     */
     async ensureSpine(force = false) {
         if (!this.host.material) return false;
         const state = this.view();

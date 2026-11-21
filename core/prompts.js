@@ -9,6 +9,7 @@ import { FACT_KINDS } from './enums.js';
 import { agendaLines } from './agenda.js';
 import { standouts, statusPhrase } from './social.js';
 import { READINGS, spineForObserver, spineForPlanner } from './spine.js';
+import { queuedBeatText } from './planner.js';
 import { awakeThreads, bandOf, factsInView } from './state.js';
 import { arr } from './util.js';
 
@@ -33,8 +34,8 @@ Rules:
 9. A contradiction is when the REPLY plainly conflicts with a line under Established facts, or with a character's recorded condition or abilities (a dead character speaking, a slower runner catching a faster one with no stated reason). Give a one-line "correction" the narrator can apply next turn. A correction overrides the story, so be certain: a character may have learned something off-stage, changed their mind or lied. When in doubt, leave the list empty.
 10. "secret": true only when the REPLY shows someone deliberately keeping the fact from another character. "beliefs" are for a character shown believing something, above all something mistaken. A thread is an unresolved question, promise or danger the story has raised; open one only when the REPLY raises it. To advance or resolve a thread, copy its id from the Open threads list: thread ids start with "t-". Ids from Unconfirmed belong only in "confirmed", clue ids only in "clues_found"; neither ever goes in "threads". When Open threads lists none, a thread can only be opened.
 11. Text in brackets that speaks to the player out of character is not narration. Record nothing from it.
-13. "settled": a matter closed for good, so the story stops pressing it. Record one when the player character plainly and finally answers something others keep pressing (a price, a demand, a test of motive: "nothing, none, just a helping hand"), or when the player's message shows they have had enough of a thread, in or out of character ("enough", "this is too much", walking out of it). "text" says what is closed, as plain fact ("Max wants nothing in return for his help"). The quote may come from the REPLY or from the player's message. Skip what is already under Settled.
 12. A fact is worth recording only if the story could turn on it later: who someone is, what they know, want, decided, promised, owe, hold or lost, an injury, a revelation, a lasting change to a person, place or thing. Restatements of Established facts are not facts. Name each fact's "kind" from this list: ${FACT_KINDS.map(([k, , m]) => `${k} (${m})`).join('; ')}. A gesture, glance, posture or piece of scenery is not worth recording; if you are unsure, choose the kind honestly: code decides what to keep. Most replies give one to three facts, often none.
+13. "settled": a matter closed for good, so the story stops pressing it. Record one when the player character plainly and finally answers something others keep pressing (a price, a demand, a test of motive: "nothing, none, just a helping hand"), or when the player's message shows they have had enough of a thread, in or out of character ("enough", "this is too much", walking out of it). "text" says what is closed, as plain fact ("Max wants nothing in return for his help"). The quote may come from the REPLY or from the player's message. Skip what is already under Settled.
 
 ${JSON_ONLY}
 
@@ -81,11 +82,11 @@ ${JSON_ONLY}
 /**
  * Tracker slice: ending titles and open criteria, the first open milestones' open criteria, and the batch of exchanges
  * since the last check, oldest first. Nothing else.
- * @param {{state: object, exchanges?: {player: string, reply: string}[], reply?: string, playerMessage?: string}} args
+ * @param {{state: object, exchanges: {player: string, reply: string}[]}} args
  */
-export function trackerPrompt({ state, exchanges, reply, playerMessage }) {
+export function trackerPrompt({ state, exchanges }) {
     const sv = spineForObserver(state);
-    const list = arr(exchanges).length ? exchanges : [{ player: playerMessage, reply }];
+    const list = arr(exchanges);
     // Readings and criteria are listed apart, so one reading per ending is never taken as a verdict per criterion.
     const crit = (item) => item.criteria.map(c => `  - ${c.id}: ${c.text}${c.lasting ? ' (lasting)' : ''}${c.partial ? ' (partly shown once already)' : ''}${c.role ? ` (role: ${c.role})` : ''}`).join('\n');
     const groups = [...arr(sv?.endings).map(e => [`Ending ${e.id}, ${e.title}`, e]), ...arr(sv?.milestones).map(m => [`Milestone ${m.id}, ${m.title}`, m])].filter(([, it]) => it.criteria.length);
@@ -343,7 +344,7 @@ function planContext(state, loreKeys, memory = null) {
     const g = state.genre ?? {};
     // Full lines only for the people in play: present, main cast, named in a queued opening, or holding an agenda. The
     // rest are names (audit, 21 Nov 2026: every character, away and dead ones too, with full profile grew without end).
-    const queuedText = state.beats.filter(b => b.status === 'queued').map(b => `${b.goal ?? ''} ${b.intent ?? ''} ${b.pressure ?? ''}`).join(' ').toLowerCase();
+    const queuedText = queuedBeatText(state).toLowerCase();
     const inPlay = (n, c) => !c.dead && (c.main || arr(state.scene?.present).includes(n) || queuedText.includes(n.toLowerCase()) || !!state.agendas?.[n]);
     const npcs = Object.entries(state.cast).filter(([, c]) => !c.pc);
     const cast = npcs.filter(([n, c]) => inPlay(n, c)).map(([n, c]) =>

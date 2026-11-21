@@ -2,6 +2,15 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+## Refactor after 0.2.0 (22 Nov 2026)
+
+*Extension only. No behaviour change, except the one noted.*
+
+- One helper for the queued openings' text (planner and observer used two copies); one admission path for role characters in the validator; one call for hidden and visible replies' spine findings.
+- Removed the unread `meta.settledTurn`, and the tracker prompt's old single-reply parameters (it takes exchanges only).
+- Doc comments back above their functions; observer rules numbered in order.
+- Noted change: hand-editing a single stat (`cast.X.stats.<stat>`) now also keeps a re-profile from overwriting the sheet, as editing the whole sheet already did.
+
 ## 0.2.0: role characters, skipped milestones (22 Nov 2026)
 
 *Extension and card (version bump): re-import the card.*

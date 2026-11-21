@@ -75,14 +75,14 @@ test('the observer never sees the spine; the tracker sees its endings, open crit
     const s = spineState();
     const obs = observerPrompt({ state: s, reply: 'Rain.', playerMessage: '', offered: {} });
     assert.ok(!obs[0].content.includes('Spine rules') && !obs[1].content.includes('e1: The rightful throne'), 'the observer is back to record keeping');
-    const tr = trackerPrompt({ state: s, reply: 'Rain falls on the gate.', playerMessage: 'I wait for Corwin.' });
+    const tr = trackerPrompt({ state: s, exchanges: [{ player: 'I wait for Corwin.', reply: 'Rain falls on the gate.' }] });
     assert.ok(tr[0].content === TRACKER_SYSTEM && tr[0].content.includes('Spine rules:'));
     assert.ok(tr[1].content.includes('e1: The rightful throne') && tr[1].content.includes('m1-c1: Ser Corwin stands with him'));
     assert.ok(tr[1].content.includes('I wait for Corwin.') && tr[1].content.includes('### REPLY\nRain falls on the gate.'));
     const batch = trackerPrompt({ state: s, exchanges: [{ player: 'a', reply: 'One.' }, { player: 'b', reply: 'Two.' }] })[1].content;
     assert.ok(batch.indexOf('## EXCHANGE 1') < batch.indexOf('## EXCHANGE 2') && batch.includes('### REPLY\nTwo.'));
     s.spine.endings[0].criteria[0].mark = 'met';
-    assert.ok(!trackerPrompt({ state: s, reply: 'Rain.' })[1].content.includes('e1-c1'), 'resolved criteria are not shown');
+    assert.ok(!trackerPrompt({ state: s, exchanges: [{ player: '', reply: 'Rain.' }] })[1].content.includes('e1-c1'), 'resolved criteria are not shown');
 });
 
 test('the planner reads the spine, the kind definitions and the spine rules', () => {

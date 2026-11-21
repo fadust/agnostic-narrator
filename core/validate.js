@@ -57,6 +57,13 @@ export function validateObservation(raw, ctx) {
         const hits = partial(k);
         return hits.length === 1 ? hits[0] : undefined;
     };
+    /** A person known only by a role, admitted when they speak under it or a plan centres on them: their cast key, or ''. */
+    const admitRole = (n) => {
+        if (!castableRole(n, ctx.text, ctx.planned)) return '';
+        const rn = roleName(n);
+        names.set(nameKey(rn), rn);
+        return rn;
+    };
     /** Known names that share every word with `k`, one way or the other. */
     const partial = (k) => {
         const tok = k.split(' ');
@@ -120,8 +127,7 @@ export function validateObservation(raw, ctx) {
             if (!namedInReply(who)) return 'introduced name not in the reply';
             if (ambiguous(who)) return 'name matches more than one known character';
             if (!resolve(who) && !looksLikeName(who)) {
-                if (!castableRole(who, ctx.text, ctx.planned)) return 'a role, not a named character';
-                names.set(nameKey(roleName(who)), roleName(who));
+                if (!admitRole(who)) return 'a role, not a named character';
             } else if (!resolve(who)) names.set(nameKey(who), who);
         } else if (it.change === 'named') {
             // A role character's own name is revealed: the entry moves to the name, the role stays as another name.
@@ -157,7 +163,7 @@ export function validateObservation(raw, ctx) {
                 if (r) { if (!present.includes(r)) present.push(r); continue; }
                 // Not on record, but named in the reply itself: accept, so a forgotten "introduced" cannot drop someone.
                 const name = str(n, 60);
-                if (name && !looksLikeName(name) && castableRole(name, ctx.text, ctx.planned) && hay.includes(normalise(roleName(name)))) { const rn = roleName(name); names.set(nameKey(rn), rn); present.push(rn); }
+                if (name && !looksLikeName(name) && hay.includes(normalise(roleName(name))) && admitRole(name)) present.push(roleName(name));
                 else if (name && !looksLikeName(name)) reject('scene', 'present: a role, not a named character', n);
                 else if (name && !ambiguous(name) && hay.includes(normalise(name))) { names.set(nameKey(name), name); present.push(name); }
                 else reject('scene', 'present: unknown character', n);
@@ -334,16 +340,6 @@ export function validateObservation(raw, ctx) {
 }
 
 /**
- * The spine tracker's answer: readings per ending, criteria met or failed, a milestone's event narrated.
- * Only ids the tracker was shown; every mark, every "happened" and every "against" needs a quote from a reply.
- * The tracker reads a batch of exchanges; each finding is tagged with the exchange (1-based) it came from, and a quote
- * must come from that exchange's reply. A quoted finding without an exchange is placed by where its quote is found.
- * @param {any} raw Parsed model output: { readings, marks, happened }.
- * @param {{texts?: string[], text?: string, spine: {endingIds: string[], criterionIds: string[], milestoneIds: string[]}}} ctx
- *   `texts`: the batch's replies, oldest first (`text` alone means a batch of one).
- * @returns {{delta: {readings: object[], marks: object[], happened: object[]}, rejected: {kind: string, reason: string, item: any}[], accepted: number}}
- */
-/**
  * The fact clean-up's answer: merges of two or more live facts into one current wording, and minor facts to retire.
  * Unknown ids are dropped; a fact is used once; a major fact is never retired.
  * @param {object} raw
@@ -393,6 +389,16 @@ export function speakerCheck(names, player = '') {
     };
 }
 
+/**
+ * The spine tracker's answer: readings per ending, criteria met or failed, a milestone's event narrated.
+ * Only ids the tracker was shown; every mark, every "happened" and every "against" needs a quote from a reply.
+ * The tracker reads a batch of exchanges; each finding is tagged with the exchange (1-based) it came from, and a quote
+ * must come from that exchange's reply. A quoted finding without an exchange is placed by where its quote is found.
+ * @param {any} raw Parsed model output: { readings, marks, happened }.
+ * @param {{texts?: string[], text?: string, spine: {endingIds: string[], criterionIds: string[], milestoneIds: string[]}}} ctx
+ *   `texts`: the batch's replies, oldest first (`text` alone means a batch of one).
+ * @returns {{delta: {readings: object[], marks: object[], happened: object[]}, rejected: {kind: string, reason: string, item: any}[], accepted: number}}
+ */
 export function validateTracking(raw, ctx) {
     const speakerOf = speakerCheck(ctx.names, ctx.player);
     const rejected = [];

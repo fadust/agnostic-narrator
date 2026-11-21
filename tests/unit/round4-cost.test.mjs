@@ -34,7 +34,7 @@ function busyState() {
 
 const pairs = {
     observer: [observerPrompt({ state: bareState(), reply: 'Rain fell.', playerMessage: '' }), observerPrompt({ state: busyState(), reply: 'Corwin spoke of the ledger at length.', playerMessage: 'I ask.', offered: { beat: 'b1', clues: [] } })],
-    tracker: [trackerPrompt({ state: bareState(), reply: 'A.', playerMessage: 'B' }), trackerPrompt({ state: busyState(), exchanges: [{ player: 'x', reply: 'y' }, { player: 'z', reply: 'w' }] })],
+    tracker: [trackerPrompt({ state: bareState(), exchanges: [{ player: 'B', reply: 'A.' }] }), trackerPrompt({ state: busyState(), exchanges: [{ player: 'x', reply: 'y' }, { player: 'z', reply: 'w' }] })],
     planner: [planPrompt({ state: bareState(), loreKeys: [], reason: 'cadence' }), planPrompt({ state: busyState(), loreKeys: ['harbour', 'guild'], reason: 'a milestone was reached' })],
     arc: [arcPrompt({ state: bareState(), loreKeys: [] }), arcPrompt({ state: busyState(), loreKeys: ['harbour'] })],
     spine: [spinePrompt({ material: 'one', genre: null, premise: '', arc: null, player: 'Rowan' }), spinePrompt({ material: 'two', genre: { dominant: 'mystery' }, premise: 'p', arc: { goal: 'g', forces: [], endings: [] }, player: 'Mira' })],

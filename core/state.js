@@ -54,7 +54,7 @@ export function initialState(setup = {}) {
         // The planner never reopens them; the narrator's notes carry the latest.
         settled: [],
         meta: {
-            turn: 0, lastPlanTurn: -1, planReason: '', deviationTurn: -1, settledTurn: -1, beatLog: [], pending: [], unextracted: null,
+            turn: 0, lastPlanTurn: -1, planReason: '', deviationTurn: -1, beatLog: [], pending: [], unextracted: null,
             accepted: 0, rejected: 0, rejections: [], player: setup.player ?? '', staleRollup: false, lagging: false,
             removedCast: [], renamedCast: {}, sceneSerial: 0,
         },
@@ -649,8 +649,8 @@ export function applyOp(state, op, entry, chatMids) {
                 }
                 setPath(state, op.path, clone(op.value));
                 // Stats the player sets by hand are never overwritten by a re-profile.
-                const sm = /^cast\.([^.]+)(?:\.stats)?$/.exec(op.path ?? '');
-                if (sm && op.by === 'player' && state.cast[sm[1]] && (op.path.endsWith('.stats') || op.value?.stats)) state.cast[sm[1]].statsByPlayer = true;
+                const sm = /^cast\.([^.]+)(\.stats(?:\.|$))?/.exec(op.path ?? '');
+                if (sm && op.by === 'player' && state.cast[sm[1]] && (sm[2] || (op.path === `cast.${sm[1]}` && op.value?.stats))) state.cast[sm[1]].statsByPlayer = true;
             }
             break;
         case 'cast': {
@@ -768,10 +768,9 @@ export function replay(chat, ctx, opts = {}) {
             // The spine tracker's reading of this reply, kept apart from the observer's: either can fail alone.
             // Called for every counted reply, read or not, so scene boundaries are seen.
             if (e.committed || includeProvisional) {
-                if (!e.hidden) applySpineDelta(state, e.trackPart, e, sceneKey(state), e.tracked);
                 // A reply hidden later (a summary extension hides what it has summarised) keeps what the tracker found in
-                // it; only the scene-boundary bookkeeping is skipped (audit, 21 Nov 2026: 4 of 7 readings vanished).
-                else if (e.trackPart) applySpineDelta(state, e.trackPart, e, state.spine?.scene?.key ?? null, true);
+                // it; it only leaves the scene as it is (audit, 21 Nov 2026: 4 of 7 readings vanished).
+                if (!e.hidden || e.trackPart) applySpineDelta(state, e.trackPart, e, e.hidden ? state.spine?.scene?.key ?? null : sceneKey(state), e.hidden || e.tracked);
             }
         }
         for (const op of e.ops) {
@@ -852,7 +851,6 @@ function addSettled(state, { text, quote = '', by = 'story', source = '', turn =
     state.settled = arr(state.settled).filter(x => similarity(x.text, t) < 0.6);
     state.settled.push({ id: `st-${hash(t.toLowerCase())}`, text: t, quote, by, source, turn });
     if (state.settled.length > CAPS.settledKept) state.settled.shift();
-    state.meta.settledTurn = turn;
     // What the player settled waits for the next plan to be planned around (audit, 21 Nov 2026: comparing turns missed a
     // settle logged on the same message as the latest plan). Settled from the story alone records it, no re-plan.
     if (by === 'player') state.meta.settledPending = [...new Set([...arr(state.meta.settledPending), t])];
