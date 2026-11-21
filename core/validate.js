@@ -7,7 +7,7 @@ import {
 } from './enums.js';
 import { FACT_KIND_WEIGHT } from './enums.js';
 import { READINGS } from './spine.js';
-import { looksLikeName, matchQuote, normalise, quoteMatches } from './text.js';
+import { castableRole, looksLikeName, matchQuote, normalise, quoteMatches, roleName } from './text.js';
 import { arr, isBlank, isObj, nameKey, similarity, str } from './util.js';
 
 const PLAYER_ALIASES = /^(the )?(player|player character|user|pc|protagonist|you|\{\{user\}\})$/;
@@ -50,6 +50,9 @@ export function validateObservation(raw, ctx) {
         if (!k) return undefined;
         if (names.has(k)) return names.get(k);
         if (aliases.has(k)) return aliases.get(k);
+        // "the hall master" and "Hall master" are one role character.
+        const rk = nameKey(roleName(n));
+        if (rk !== k && names.has(rk)) return names.get(rk);
         if (ctx.player && PLAYER_ALIASES.test(k)) return ctx.player;
         const hits = partial(k);
         return hits.length === 1 ? hits[0] : undefined;
@@ -116,8 +119,18 @@ export function validateObservation(raw, ctx) {
         if (it.change === 'introduced') {
             if (!namedInReply(who)) return 'introduced name not in the reply';
             if (ambiguous(who)) return 'name matches more than one known character';
-            if (!resolve(who) && !looksLikeName(who)) return 'a role, not a named character';
-            if (!resolve(who)) names.set(nameKey(who), who);
+            if (!resolve(who) && !looksLikeName(who)) {
+                if (!castableRole(who, ctx.text, ctx.planned)) return 'a role, not a named character';
+                names.set(nameKey(roleName(who)), roleName(who));
+            } else if (!resolve(who)) names.set(nameKey(who), who);
+        } else if (it.change === 'named') {
+            // A role character's own name is revealed: the entry moves to the name, the role stays as another name.
+            const r = resolve(who);
+            const to = str(it.name, 60);
+            if (!r) return 'unknown character';
+            if (!to || !looksLikeName(to) || !namedInReply(to)) return 'named: the new name is not in the reply';
+            if (resolve(to) && resolve(to) !== r) return 'named: that name is someone else';
+            return { who: r, change: 'named', name: to, quote: str(it.quote) };
         } else if (!resolve(who)) return 'unknown character';
         return { who: resolve(who), change: it.change, quote: str(it.quote) };
     });
@@ -144,7 +157,8 @@ export function validateObservation(raw, ctx) {
                 if (r) { if (!present.includes(r)) present.push(r); continue; }
                 // Not on record, but named in the reply itself: accept, so a forgotten "introduced" cannot drop someone.
                 const name = str(n, 60);
-                if (name && !looksLikeName(name)) reject('scene', 'present: a role, not a named character', n);
+                if (name && !looksLikeName(name) && castableRole(name, ctx.text, ctx.planned) && hay.includes(normalise(roleName(name)))) { const rn = roleName(name); names.set(nameKey(rn), rn); present.push(rn); }
+                else if (name && !looksLikeName(name)) reject('scene', 'present: a role, not a named character', n);
                 else if (name && !ambiguous(name) && hay.includes(normalise(name))) { names.set(nameKey(name), name); present.push(name); }
                 else reject('scene', 'present: unknown character', n);
             }

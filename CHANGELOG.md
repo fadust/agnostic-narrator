@@ -2,6 +2,15 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+## 0.2.0: role characters, skipped milestones (22 Nov 2026)
+
+*Extension and card (version bump): re-import the card.*
+
+- Someone known only by a role is a character once they speak under it ("The hall master: ...") or a queued plan centres on them. They are recorded by the role without the article ("Hall master"), and "the hall master" resolves to them. A silent role is still a passer-by.
+- When a role character's name is revealed, the observer reports it as "named": the entry moves to the name everywhere (presence, feelings, witnesses, wants) and the role stays as another name.
+- A skipped milestone stays on the tracker's list. If it happens after all, it is reopened and concludes like any other.
+- Version 0.2.0 covers everything since 0.1.0 (21 Nov 2026), entries below up to and including "Deeds count".
+
 ## A length rule the model reads last (22 Nov 2026)
 
 *Card and preset: re-import both.*

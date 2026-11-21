@@ -313,6 +313,14 @@ export function applyDelta(state, obs, entry) {
     const gone = new Set(arr(d.cast_changes).filter(c => c.change === 'departed' || c.change === 'dead').map(c => c.who));
 
     for (const c of arr(d.cast_changes)) {
+        if (c.change === 'named') {
+            if (state.cast[c.who] && c.name && c.name !== c.who) {
+                renameCast(state, c.who, c.name);
+                const p = state.cast[c.name];
+                p.aliases = [...new Set([...arr(p.aliases), c.who])].slice(0, 8);
+            }
+            continue;
+        }
         const who = ensureCast(state, c.who);
         const present = state.scene.present;
         if (c.change === 'introduced' || c.change === 'returned') {
@@ -667,16 +675,7 @@ export function applyOp(state, op, entry, chatMids) {
                 break;
             }
             if (op.action !== 'rename' || !to || to === name || !state.cast[name]) break;
-            // Renaming onto someone already in the cast says the two are one person: that entry is kept.
-            if (!state.cast[to]) state.cast[to] = state.cast[name];
-            renameAgenda(state, name, to);
-            delete state.cast[name];
-            state.scene.present = [...new Set(state.scene.present.map(swap))];
-            for (const c of Object.values(state.cast)) {
-                if (name in (c.stances ?? {})) { c.stances[to] ??= c.stances[name]; delete c.stances[name]; }
-            }
-            for (const f of [...state.canon, ...state.uncertain]) if (Array.isArray(f.witnesses)) f.witnesses = [...new Set(f.witnesses.map(swap))];
-            for (const card of Object.values(state.cards)) card.people = card.people.map(swap);
+            renameCast(state, name, to);
             state.meta.renamedCast[name] = to;
             delete state.meta.renamedCast[to]; // renaming back to an earlier name brings that name back
             state.meta.removedCast = state.meta.removedCast.filter(n => n !== to);
@@ -801,6 +800,20 @@ export function logOp(message, op) {
     } else {
         (message.narrator_ops ??= []).push(item);
     }
+}
+
+/** Move a cast entry to a new name everywhere it is referred to. Onto someone already in the cast: that entry is kept. */
+function renameCast(state, name, to) {
+    const swap = (n) => (n === name ? to : n);
+    if (!state.cast[to]) state.cast[to] = state.cast[name];
+    renameAgenda(state, name, to);
+    delete state.cast[name];
+    state.scene.present = [...new Set(state.scene.present.map(swap))];
+    for (const c of Object.values(state.cast)) {
+        if (name in (c.stances ?? {})) { c.stances[to] ??= c.stances[name]; delete c.stances[name]; }
+    }
+    for (const f of [...state.canon, ...state.uncertain]) if (Array.isArray(f.witnesses)) f.witnesses = [...new Set(f.witnesses.map(swap))];
+    for (const card of Object.values(state.cards)) card.people = card.people.map(swap);
 }
 
 /**

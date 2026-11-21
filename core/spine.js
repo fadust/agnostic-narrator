@@ -76,7 +76,9 @@ export function spineForObserver(state) {
     }));
     return {
         endings: arr(sp.endings).map(e => ({ id: e.id, title: e.title, criteria: open(e) })),
-        milestones: openMilestones(sp).slice(0, SPINE_CAPS.observerMilestones).map(m => ({ id: m.id, title: m.title, criteria: open(m) })),
+        // Skipped milestones stay on offer (owner, 22 Nov 2026): one that happens later is reopened.
+        milestones: [...openMilestones(sp).slice(0, SPINE_CAPS.observerMilestones), ...arr(sp.milestones).filter(m => m.status === 'skipped').slice(-2)]
+            .map(m => ({ id: m.id, title: m.title, criteria: open(m) })),
     };
 }
 
@@ -213,7 +215,9 @@ export function applySpineDelta(state, sd, entry, key, tracked = true) {
         if (m.mark === 'met') built = true;
     }
     for (const h of arr(sd.happened)) {
-        const ms = arr(sp.milestones).find(x => x.id === h.milestone && x.status !== 'concluded' && x.status !== 'skipped');
+        const ms = arr(sp.milestones).find(x => x.id === h.milestone && x.status !== 'concluded');
+        // A skipped milestone that happens after all is reopened, and concludes like any other (owner, 22 Nov 2026).
+        if (ms?.status === 'skipped') ms.status = 'open';
         if (ms && !ms.happened) { ms.happened = { quote: str(h.quote), source: entry.mid, ...(h.speaker ? { speaker: str(h.speaker, 60) } : {}) }; built = true; }
     }
     const byEnding = {};

@@ -52,6 +52,25 @@ export function looksLikeName(name) {
     return !(/\p{Ll}/u.test(n) && !/\p{Lu}/u.test(n));
 }
 
+/** A role as a cast key: no leading article, first letter capital ("the hall master" -> "Hall master"). */
+export function roleName(name) {
+    const n = String(name ?? '').trim().replace(/^(the|a|an)\s+/i, '');
+    return n ? n[0].toUpperCase() + n.slice(1) : '';
+}
+
+/**
+ * A person known only by a role counts as a character once they speak under that role ("The hall master: ...", or
+ * "Hall master:" at a line's start) or a plan centres on them (owner, 22 Nov 2026: a role-only figure who granted the
+ * commission and gained trust was refused everywhere, while plans kept building on him).
+ */
+export function castableRole(name, text, planned = '') {
+    const role = roleName(name).toLowerCase();
+    if (!role || role.split(' ').length > 4) return false;
+    const esc = role.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (new RegExp(`(^|\\n)\\s*[*_]*(the\\s+)?${esc}[*_]*\\s*:`, 'i').test(String(text ?? ''))) return true;
+    return String(planned ?? '').toLowerCase().includes(role);
+}
+
 /** Normalise for quote comparison: drop markup, unify punctuation away, collapse whitespace, lowercase. */
 export function normalise(text) {
     return String(text ?? '')

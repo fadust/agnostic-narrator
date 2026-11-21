@@ -17,12 +17,12 @@ const replayOps = (ops) => { const s = fresh(); for (const op of ops) applySpine
 const conclude = (milestone) => ({ kind: 'conclusion', by: 'director', milestone, text: `${milestone} done` });
 const status = (s) => s.spine.milestones.map(m => m.status);
 
-test('a later conclusion skips the earlier open milestone; it vanishes from every view', () => {
+test('a later conclusion skips the earlier open milestone; only the tracker still watches for it (owner, 22 Nov 2026)', () => {
     const s = replayOps([conclude('m2')]);
     assert.deepEqual(status(s), ['skipped', 'concluded', 'open']);
     assert.deepEqual(needsConclusion(s).map(m => m.id), []);
     assert.deepEqual(chapters(s).map(m => m.id), ['m2']);
-    assert.deepEqual(spineForObserver(s).milestones.map(m => m.id), ['m3']);
+    assert.deepEqual(spineForObserver(s).milestones.map(m => m.id), ['m3', 'm1']);
     assert.deepEqual(spineForPlanner(s).milestones.map(m => m.id), ['m3']);
     // even a fully resolved skipped milestone, or one whose event happened, never waits for a conclusion
     s.spine.milestones[0].criteria[0].mark = 'met';
@@ -64,4 +64,12 @@ test('a Plan tab save does not undo a skip', () => {
     const merged = mergeSpineEdit(s.spine, edit);
     assert.equal(merged.milestones[0].status, 'skipped');
     assert.equal(merged.milestones[0].title, 'renamed');
+});
+
+test('a skipped milestone that happens after all is reopened (owner, 22 Nov 2026)', async () => {
+    const { applySpineDelta } = await import('../../core/spine.js');
+    const s = replayOps([conclude('m2')]);
+    applySpineDelta(s, { happened: [{ milestone: 'm1', quote: 'the knee is lanced' }] }, { mid: 'zz' }, s.spine.scene.key, true);
+    assert.equal(s.spine.milestones[0].status, 'open');
+    assert.ok(s.spine.milestones[0].happened);
 });

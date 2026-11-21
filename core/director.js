@@ -416,6 +416,7 @@ export class Director {
             const names = [...Object.keys(before.cast), before.meta.player].filter(Boolean);
             const v = validateObservation(parsed.value, {
                 text: entry.text, names, tombstones: before.tombstones, present: before.scene.present,
+                planned: before.beats.filter(b => b.status === 'queued').map(b => `${b.goal ?? ''} ${b.intent ?? ''} ${b.pressure ?? ''}`).join(' '),
                 aliases: Object.fromEntries(Object.entries(before.cast).flatMap(([n, c]) => arr(c.aliases).map(a => [a, n]))),
                 uncertainIds: before.uncertain.map(u => u.id), threadIds: before.threads.map(t => t.id),
                 clueIds: offered.clues, player: before.meta.player, playerMessage,
