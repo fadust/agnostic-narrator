@@ -561,7 +561,9 @@ export function applyOp(state, op, entry, chatMids) {
             const v = op.value ?? {};
             const done = state.beats.filter(b => b.status !== 'queued');
             const seq = op.seq ?? turn;
-            const fresh = arr(v.beats).map((b, n) => sanitiseBeat(b, `b-${tag}-${seq}-${n}`));
+            // Never the id of a beat already on record (older records may repeat a plan number).
+            const taken = new Set(done.map(b => b.id));
+            const fresh = arr(v.beats).map((b, n) => { let id = `b-${tag}-${seq}-${n}`; while (taken.has(id)) id += 'x'; taken.add(id); return sanitiseBeat(b, id); });
             state.beats = [...done, ...fresh];
             if (Array.isArray(v.scenes)) state.scenes = clone(v.scenes);
             if (state.arc) {

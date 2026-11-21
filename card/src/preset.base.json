@@ -3,7 +3,7 @@
   "frequency_penalty": 0,
   "presence_penalty": 0,
   "top_p": 1,
-  "openai_max_tokens": 10000,
+  "openai_max_tokens": 1500,
   "names_behavior": 0,
   "send_if_empty": "",
   "impersonation_prompt": "[For this one message you are the player, not the narrator. Write {{user}}'s next message as the player would type it: what {{user}} does and says next, in the style of the player's earlier messages, one short paragraph. Do not narrate the world or other characters, do not continue the story's prose, and add no tags, timestamps or blocks.]",

@@ -4,6 +4,7 @@
 // toggle or a tooltip; forms with plain fields instead of raw JSON; every change is one visible button.
 // Full disclosure: every setting has a control here, and everything the director holds is shown on some tab.
 
+import { failureHint, moduleLabel } from '../core/failures.js';
 import { AGE_GROUPS, ARC_TENSION, AXES, BANDS, BEAT_TYPES, CLUE_ROUTES, INITIATIVE, LETHALITY, SEVERITY, STAGES, STATS, STAT_BASELINE, TEMPERAMENTS, TEMPO } from '../core/enums.js';
 import { tellsFor } from '../core/social.js';
 import { splitByCast, summaryView } from '../core/record.js';
@@ -515,7 +516,7 @@ export function mountUi(api) {
             const c = logModule ? calls[logModule] : null;
             return `
                 <h4>Director errors</h4>
-                ${director.errors.slice().reverse().map(e => `<div class="nd-line nd-warn"><div class="nd-line-text"><b>${h(e.module)}</b> ${h(e.error)}</div></div>`).join('') || empty('None.')}
+                ${director.errors.slice().reverse().map(e => `<div class="nd-line nd-warn"><div class="nd-line-text"><b>${h(moduleLabel(e.module))}</b> ${h(e.error)}<br><small>${h(failureHint(e.error))}</small></div></div>`).join('') || empty('None.')}
                 ${director.errors.length ? `<div class="nd-actions">${button('cmd', 'Retry failed calls', 'data-cmd="retry"')}</div>` : ''}
                 <h4>Corrections sent to the narrator</h4>
                 ${s.flags.slice(-8).reverse().map(f => `<div class="nd-line"><div class="nd-line-text"><b>Turn ${f.turn}</b> ${h(f.correction)}<br><small>“${h(f.quote)}” against: ${h(f.conflicts_with)}</small></div></div>`).join('') || empty('None.')}
@@ -543,6 +544,25 @@ export function mountUi(api) {
         },
     };
 
+    /**
+     * What is failing right now, on top of every tab (audit, 22 Nov 2026: failures were only in the Log tab). Each line
+     * says what the part does, the error, and what to do; one Retry for all.
+     */
+    function failingBanner() {
+        const failing = Object.values(director.failing ?? {});
+        if (!failing.length) return '';
+        const lines = failing.map(f => `<div class="nd-line"><div class="nd-line-text"><b>${h(moduleLabel(f.module))}</b> is failing${f.count > 1 ? ` (${f.count}×)` : ''}: ${h(String(f.error).slice(0, 220))}<br><small>${h(failureHint(f.error))}</small></div></div>`).join('');
+        return `<div class="nd-failing">${lines}<div class="nd-actions">${button('cmd', 'Retry now', 'data-cmd="retry"')}</div></div>`;
+    }
+
+    /** A dot on the menu entry while something fails, so it is seen with the panel closed. */
+    function badge() {
+        const n = Object.keys(director.failing ?? {}).length;
+        const wand = $('#nd-wand');
+        wand.find('.nd-badge').remove();
+        if (n) wand.append(`<span class="nd-badge" title="${n} director part${n > 1 ? 's' : ''} failing">${n}</span>`);
+    }
+
     // ------------------------------------------------------------ rendering
     function render(force = false) {
         if (!open) return;
@@ -558,12 +578,13 @@ export function mountUi(api) {
                 : '<p class="nd-note">The director is not active in this chat. It runs only with the Narrator card: open a chat with it, or add it to a group with your cards.</p>');
             return;
         }
-        $('#nd-status').text(director.running ? 'working…' : `narrator: ${ref.name}`);
+        const failing = Object.values(director.failing ?? {});
+        $('#nd-status').html(`${h(director.running ? 'working…' : `narrator: ${ref.name}`)}${failing.length ? ` <span class="nd-warn nd-failing-count" data-nd-tab="log" title="Open the log">· ${failing.length} failing</span>` : ''}`);
         // Never redraw over something the player is typing or has not saved.
         if (!force && (dirty || $('#nd-body').find('input:focus, textarea:focus, select:focus').length)) return;
         const scroll = $('#nd-body').scrollTop();
         try {
-            $('#nd-body').html(tabs[tab](director.view()));
+            $('#nd-body').html(failingBanner() + tabs[tab](director.view()));
         } catch (e) {
             $('#nd-body').html(pre(String(e?.stack ?? e)));
         }
@@ -873,5 +894,5 @@ export function mountUi(api) {
             try { await actions[this.dataset.act]?.(this); } catch (e) { console.error('[Narrator Director]', e); toastr.error(String(e?.message ?? e), 'Narrator Director'); }
         });
 
-    return { update: () => render(), open: () => show(true), close: () => show(false) };
+    return { update: () => { badge(); render(); }, open: () => show(true), close: () => show(false), showLog: () => { tab = 'log'; show(true); } };
 }

@@ -107,6 +107,14 @@ function slimRejected(list) {
     });
 }
 
+/**
+ * The number for a new plan on a message: one past the plans already logged there. It survives a page reload, which an
+ * in-memory counter did not (package audit, 22 Nov 2026: a second plan after a reload reused the first one's beat ids).
+ */
+function planSeqOn(message) {
+    return arr(message?.extra?.narrator?.ops).filter(o => o.kind === 'plan').reduce((n, o) => Math.max(n, (Number(o.seq) || 0) + 1), 0);
+}
+
 /** A cheap print of the chat for the replay cache: what replay reads, without hashing every message's text. */
 function chatPrint(chat) {
     let out = `${chat.length}`;
@@ -165,9 +173,10 @@ export class Director {
         this.queues = new Map();
         this.calls = {};
         this.errors = [];
+        this.failing = {};
+        this.profileFails = {};
         this.mids = null;
         this.abort = new AbortController();
-        this.planSeq = 0;
         /** Replies whose record went stale (edited, swiped). They are re-read even outside the backfill window. */
         this.reread = new Set();
         /** Step name -> time before which it is not retried after a failure. */
@@ -195,6 +204,8 @@ export class Director {
         this.abort = new AbortController();
         this.mids = null;
         this.errors = [];
+        this.failing = {};
+        this.profileFails = {};
         this.calls = {};
         this.again = false;
         this.reread.clear();
@@ -217,7 +228,7 @@ export class Director {
         this.mids = r.mids;
         for (const id of r.stale) this.reread.add(id);
         for (const id of r.deleted) this.reread.delete(id);
-        if (r.changed) this.host.save();
+        if (r.changed) this.save();
         return r;
     }
 
@@ -332,14 +343,44 @@ export class Director {
         if (!parsed.ok) throw new Error(`${module}: ${parsed.error}`);
         const v = validate(parsed.value);
         if (!v.ok) throw new Error(`${module}: ${v.error}`);
+        // Recovered only once an answer is usable, not merely received: a model answering in the wrong shape still fails.
+        this.recovered(module);
         return v.value;
     }
 
     fail(module, e, mid = null) {
         if (String(e?.message) === 'superseded' || e?.name === 'AbortError') return;
-        this.errors.push({ module, error: String(e?.cause?.message ?? e?.message ?? e), mid, at: Date.now() });
+        const entry = { module, error: String(e?.cause?.message ?? e?.message ?? e), mid, at: Date.now() };
+        this.errors.push(entry);
         if (this.errors.length > 20) this.errors.shift();
         console.warn(`[Narrator Director] ${module} failed`, e);
+        // The player hears about it (audit, 22 Nov 2026): once when a module starts failing, again when it recovers.
+        const first = !this.failing[module];
+        this.failing[module] = { ...entry, count: (this.failing[module]?.count ?? 0) + 1 };
+        this.host.failed?.(module, entry, first);
+    }
+
+    /** A module answered again after failing: it is no longer reported. */
+    recovered(module) {
+        if (!this.failing[module]) return;
+        delete this.failing[module];
+        this.host.failed?.(module, null, false);
+    }
+
+    /**
+     * Save the chat: at once outside a pass, once at its end inside one (package audit, 22 Nov 2026: a pass wrote the whole
+     * chat up to 7 times). A player's own edit still saves at once (playerOp).
+     */
+    save() {
+        if (this.running) { this.unsaved = true; return; }
+        this.host.save();
+    }
+
+    /** The save a pass held back, written when the pass ends. */
+    flushSave() {
+        if (!this.unsaved) return;
+        this.unsaved = false;
+        this.host.save();
     }
 
     /** Start (or re-run) the background pass. Single flight. */
@@ -354,6 +395,7 @@ export class Director {
                 } while (this.again);
             } finally {
                 this.running = false;
+                this.flushSave();
             }
         })();
         return this.pass;
@@ -369,7 +411,7 @@ export class Director {
         this.running = true;
         let out, err = null;
         this.pass = (async () => {
-            try { out = await fn(); } catch (e) { err = e; } finally { this.running = false; }
+            try { out = await fn(); } catch (e) { err = e; } finally { this.running = false; this.flushSave(); }
         })();
         await this.pass;
         if (this.again) { this.again = false; this.kick(); }
@@ -394,7 +436,9 @@ export class Director {
                 const next = this.nextUnread();
                 if (!next || epoch !== this.epoch) break;
                 const done = await this.observe(next);
-                if (epoch !== this.epoch || done === 'transient') break;
+                // A reply that changed while it was read (still streaming, or swiped) waits for the next pass instead of being
+                // read again at once (package audit P1, 22 Nov 2026: up to 50 paid reads of one streaming reply per pass).
+                if (epoch !== this.epoch || done === 'transient' || (!done && this.again)) break;
                 if (done) this.host.changed?.('observed');
             }
         })();
@@ -422,7 +466,8 @@ export class Director {
             // would be repeated on every chat event.
             if ((this.cool[name] ?? 0) > Date.now()) continue;
             try {
-                if (await step()) { this.host.save(); this.host.changed?.('directed'); }
+                if (await step()) { this.save(); this.host.changed?.('directed'); }
+                this.recovered(name); // the step ran through: whatever failed under its name works again
             } catch (e) {
                 this.cool[name] = Date.now() + (e?.transient ? this.transientWait(e.run) : COOL_MS);
                 if (e?.transient) this.retrySoon(e.run);
@@ -436,6 +481,8 @@ export class Director {
         const cfg = this.cfg();
         const entries = scan(this.host.chat(), this.host.narrator());
         const narr = entries.filter(e => e.kind === 'narration' && !e.hidden);
+        // The newest reply is not read while the narrator is still writing it.
+        if (this.host.generating?.() && narr.at(-1)?.i === entries.at(-1)?.i) narr.pop();
         const recent = new Set(narr.slice(-cfg.backfill));
         return narr.find(e => (recent.has(e) || this.reread.has(e.mid)) && !e.valid && e.text
             && !(e.rec?.err?.hash === e.hash && e.rec.err.n >= cfg.maxRetries)) ?? null;
@@ -470,9 +517,10 @@ export class Director {
                 clueIds: offered.clues, player: before.meta.player, playerMessage,
                 known: [playerMessage, ...before.canon.map(f => f.fact), ...before.uncertain.map(f => f.fact)].join('\n'),
             });
+            this.recovered('observer');
             rec.obs = { hash: entry.hash, delta: v.delta, accepted: v.accepted, rejected: slimRejected(v.rejected), beat: offered.beat, at: Date.now(), strip: [...(this.host.narrator()?.strip ?? [])] };
             delete rec.err;
-            this.host.save();
+            this.save();
             return true;
         } catch (e) {
             if (!stillCurrent()) { this.again = true; return false; }
@@ -480,7 +528,7 @@ export class Director {
             if (String(e?.message) !== 'superseded' && e?.name !== 'AbortError') {
                 // The previous state stands. Remember the failure so a broken reply is not retried forever.
                 rec.err = { hash: entry.hash, n: (rec.err?.hash === entry.hash ? rec.err.n : 0) + 1, error: String(e?.message ?? e) };
-                this.host.save();
+                this.save();
             }
             this.fail('observer', e, entry.mid);
             return false;
@@ -569,9 +617,10 @@ export class Director {
             if (!stillCurrent()) { this.again = true; return false; }
             // A batch that fitted lets the next one grow back by a reply, up to the usual size (audit map, 22 Nov 2026).
             if (this.trackMax) this.trackMax = this.trackMax + 1 >= (Number(this.cfg().trackEvery) || DEFAULTS.trackEvery) ? null : this.trackMax + 1;
+            this.recovered('tracker');
             rec.track = { covers: batch.map(e => ({ mid: e.mid, hash: e.hash })), delta: v.delta, rejected: slimRejected(v.rejected), at: Date.now(), strip: [...(this.host.narrator()?.strip ?? [])] };
             delete rec.trackErr;
-            this.host.save();
+            this.save();
             return true;
         } catch (e) {
             if (!stillCurrent()) { this.again = true; return false; }
@@ -582,7 +631,7 @@ export class Director {
             if (String(e?.message) !== 'superseded' && e?.name !== 'AbortError') {
                 rec.trackErr = { sig, n: (rec.trackErr?.sig === sig ? rec.trackErr.n : 0) + 1, error: String(e?.message ?? e) };
                 this.cool.tracker = Date.now() + COOL_MS;
-                this.host.save();
+                this.save();
             }
             this.fail('tracker', e, carrier.mid);
             return false;
@@ -662,6 +711,9 @@ export class Director {
             const h = hash(card.text);
             // Keyed by the card, not the cast: a card's people may carry other names than its title.
             if (!str(card.text, 20) || state.cards[card.name]?.hash === h) continue;
+            // A card the model keeps failing on is set aside after its tries, so it no longer holds back the others
+            // (package audit, 22 Nov 2026). "Retry failed calls" gives it another go.
+            if ((this.profileFails[h] ?? 0) >= this.cfg().maxRetries) continue;
             const epoch = this.epoch;
             try {
                 const value = await this.json('profile', profilePrompt({ name: card.name, card: card.text, genre: state.genre, isPlayer: card.isPlayer }), validateProfile);
@@ -669,8 +721,9 @@ export class Director {
                 // The player character's sheet follows their sources until the player sets the stats by hand (audit, 21 Nov 2026).
                 wrote = this.logSetup(epoch, { kind: 'profile', by: 'setup', name: card.name, value, cardHash: h, pc: !!card.isPlayer, ...(card.isPlayer ? { force: true } : {}), ...(card.aliases?.length ? { aliases: card.aliases } : {}) }) || wrote;
             } catch (e) {
+                this.profileFails[h] = (this.profileFails[h] ?? 0) + 1;
                 this.cool.profile = Date.now() + COOL_MS;
-                this.fail('profile', e);
+                this.fail('profile', Object.assign(new Error(`${card.name}: ${e?.message ?? e}`), { transient: e?.transient }));
                 return wrote;
             }
         }
@@ -694,7 +747,11 @@ export class Director {
         }
         // Everyone else the story brought in (no card, no lorebook entry) is profiled once from what the story has shown
         // of them so far: build, background and occupation set the stats (owner, 21 Nov 2026).
-        for (const card of storyCards(this.view(), this.host.chat(), this.host.narrator(), this.host.loreEntries?.() ?? [])) {
+        // Cached per chat revision and cast: it reads every reply for every cast member (package audit, 22 Nov 2026).
+        const sv = this.view();
+        const storyKey = `${chatPrint(this.host.chat())}#${Object.entries(sv.cast).map(([n, c]) => n + (c.stats ? '+' : '')).join('|')}#${Object.keys(sv.cards ?? {}).join('|')}#${(this.host.loreEntries?.() ?? []).length}`;
+        if (this.storyCache?.key !== storyKey) this.storyCache = { key: storyKey, cards: storyCards(sv, this.host.chat(), this.host.narrator(), this.host.loreEntries?.() ?? []) };
+        for (const card of this.storyCache.cards) {
             const epoch = this.epoch;
             try {
                 const value = await this.json('profile', profilePrompt({ name: card.name, card: card.text, genre: state.genre, isPlayer: false, story: true }), validateProfile);
@@ -752,7 +809,7 @@ export class Director {
             return wrote;
         }
         const check = checked.flagged || checked.fixed.length ? { fixed: checked.fixed, rewritten: checked.rewritten, dropped: checked.dropped } : undefined;
-        wrote = this.logOnAnchor(anchor, anchorHash, { kind: 'plan', by: 'director', value: checked.plan, reason, seq: this.planSeq++, ...(check ? { check } : {}) }) || wrote;
+        wrote = this.logOnAnchor(anchor, anchorHash, { kind: 'plan', by: 'director', value: checked.plan, reason, seq: planSeqOn(anchor), ...(check ? { check } : {}) }) || wrote;
         return wrote;
     }
 
@@ -934,6 +991,8 @@ export class Director {
     retry() {
         for (const m of this.host.chat()) { delete m.extra?.narrator?.err; delete m.extra?.narrator?.trackErr; }
         this.errors = [];
+        // Failing parts stay listed until they answer again, so the player sees them recover.
+        this.profileFails = {};
         this.cool = {};
         this.trackMax = null;
         this.emptyRun = {};

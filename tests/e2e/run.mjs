@@ -420,6 +420,29 @@ await check('disabled: no notes, no flags, card still narrates', async () => {
     await idle();
 });
 
+await check('a failing part is shown: a toast once, a dot on the menu entry, a banner in the panel; recovery clears them', async () => {
+    mock.control.failObserver = true;
+    await send('I wait by the well.');
+    await sleep(500);
+    const shown = await ev(() => ({
+        toast: [...document.querySelectorAll('#toast-container .toast-warning')].map(t => t.textContent).join(' | '),
+        failing: Object.keys(window.narratorDirector.director.failing),
+        dot: document.querySelector('#nd-wand .nd-badge')?.textContent ?? '',
+    }));
+    assert(/reading replies failed/.test(shown.toast) && /wrong shape/.test(shown.toast), 'toast: ' + shown.toast);
+    assert(shown.failing.includes('observer') && shown.dot === '1', JSON.stringify(shown));
+    await ev(() => document.querySelector('#nd-wand')?.click());
+    await sleep(300);
+    const banner = await ev(() => document.querySelector('#nd-body .nd-failing')?.textContent ?? '');
+    assert(/reading replies/.test(banner) && /Retry now/.test(banner), 'banner: ' + banner);
+    mock.control.failObserver = false;
+    await ev(() => window.narratorDirector.director.retry());
+    await idle();
+    const after = await ev(() => ({ failing: Object.keys(window.narratorDirector.director.failing), dot: !!document.querySelector('#nd-wand .nd-badge'), ok: [...document.querySelectorAll('#toast-container .toast-success')].map(t => t.textContent).join(' | ') }));
+    assert(!after.failing.length && !after.dot, JSON.stringify(after));
+    assert(/reading replies works again/.test(after.ok), 'no recovery toast: ' + after.ok);
+    await ev(() => document.querySelector('#nd-close')?.click());
+});
 await check('director calls go through a Connection Manager profile when one is chosen', async () => {
     await ev((url) => {
         const c = SillyTavern.getContext();

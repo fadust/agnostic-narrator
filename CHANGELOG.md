@@ -2,6 +2,30 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+# 0.2.1 (22 Nov 2026)
+
+*Extension, card and preset: re-import the card and the preset.* Everything below down to "0.2.0" is in this release.
+
+## Failures you can see, and the package audit fixes (22 Nov 2026)
+
+From docs/package-audit-2026-11-22.md.
+
+- **A failing part of the director is shown** (P6):
+  - a toast the first time it fails, saying what failed, the error and what to do (raise a limit, check the key, try another model);
+  - a count in the panel header and a dot on the Director menu entry while it fails;
+  - a banner at the top of every inspector tab with a Retry button;
+  - a toast when it works again. It counts as working again only when its answer is usable, not merely received.
+- **No paid re-reads of a reply that is still being written** (P1). The newest reply waits until the narrator finishes, and a reply that changed while it was read waits for the next pass.
+- **`/director retcon` is guarded** (P2). Text under 3 letters is refused. More than 3 matching facts are listed first; add `!` at the end to retcon them all.
+- **The preset caps replies at 1,500 tokens** (P4). It was 10,000, against a target of about 500 (up to 1,000 for action).
+- **Embellishing no longer means longer** (P5): "grow one or two beats", "richly but briefly (a short message gets a short rendering)", and in sex scenes "one or two beats of your own per reply".
+- **Plan ids** never repeat after a page reload. The plan number comes from the plans already on the message, and an id already on record is never reused.
+- **Profiling:** a card the model keeps failing on is set aside after its tries, so the lorebook and story profiles after it still run. "Retry failed calls" gives it another go.
+- **Speed and saving:**
+  - a background pass saves the chat once at its end (it was up to 7 full writes);
+  - the scan for story-introduced people is cached per chat revision;
+  - measured: the replay-cache key costs 0.6 ms at about 1,000 messages, against a 150 ms replay, so it stays.
+
 ## End-to-end checks back to green (22 Nov 2026)
 
 *Tests only.* All 29 checks pass against a real SillyTavern (B's checkout, throwaway data root).
@@ -47,7 +71,9 @@ Newest first. Each entry says which parts changed, so you know what to re-import
 - Doc comments back above their functions; observer rules numbered in order.
 - Noted change: hand-editing a single stat (`cast.X.stats.<stat>`) now also keeps a re-profile from overwriting the sheet, as editing the whole sheet already did.
 
-## 0.2.0: role characters, skipped milestones (22 Nov 2026)
+# 0.2.0 (22 Nov 2026)
+
+## Role characters, skipped milestones (22 Nov 2026)
 
 *Extension and card (version bump): re-import the card.*
 

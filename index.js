@@ -15,6 +15,7 @@ import { FALLBACK_NOTE, hasLeak, parseTags, stripDirector } from './core/text.js
 import { clone, similarity, str } from './core/util.js';
 import { clearVars, publicVars, writeVars } from './core/vars.js';
 import { makeCall } from './st/call.js';
+import { failureHint, moduleLabel } from './core/failures.js';
 import { memoryGaps, memoryStory, providerOptions, registerMemoryProvider } from './st/providers.js';
 import { mountUi } from './st/ui.js';
 
@@ -162,6 +163,16 @@ const host = {
     castNames: () => castCards().map(card => card.name),
     memoryStory: () => memoryStory(settings),
     call: (...args) => modelCall(...args),
+    generating: () => generating,
+    // A part of the director starts failing, or answers again (audit, 22 Nov 2026: failures were silent).
+    failed(module, entry, first) {
+        if (entry && first) {
+            toastr.warning(`${moduleLabel(module)} failed: ${String(entry.error).slice(0, 160)}. ${failureHint(entry.error)}`, 'Narrator Director', { timeOut: 12000, onclick: () => ui?.showLog?.() });
+        } else if (!entry) {
+            toastr.success(`${moduleLabel(module)} works again.`, 'Narrator Director', { timeOut: 4000 });
+        }
+        ui?.update('errors');
+    },
     async cards() {
         const c = ctx();
         const cards = castCards().map(({ name, text }) => ({ name, text }));
@@ -578,13 +589,22 @@ function onGroupChatCreated() {
 
 // ---------------------------------------------------------------- player actions
 
-function retcon(text) {
+/**
+ * Retcon by text. Guarded (package audit P2, 22 Nov 2026): an empty or one-letter text matched every fact. Under 3 letters
+ * is refused; more than 3 matches are listed and need a trailing "!" to go ahead.
+ */
+function retcon(raw) {
+    let text = String(raw ?? '').trim();
+    const force = text.endsWith('!');
+    if (force) text = text.slice(0, -1).trim();
+    if (text.replace(/[^\p{L}\p{N}]/gu, '').length < 3) return 'Say what to retcon in at least a few words, for example: /director retcon Mira has the key';
     const state = director.view();
     const all = [...state.canon, ...state.uncertain];
-    const needle = text.toLowerCase().trim();
+    const needle = text.toLowerCase();
     // Prefer facts that contain the text; fall back to close rewordings. A loose match would delete too much.
     let hits = all.filter(f => f.fact.toLowerCase().includes(needle));
     if (!hits.length) hits = all.filter(f => similarity(f.fact, text) >= 0.6);
+    if (hits.length > 3 && !force) return `That matches ${hits.length} facts: ${hits.slice(0, 5).map(f => f.fact).join(' | ').slice(0, 300)}. Make the text more specific, or add ! at the end to retcon all of them.`;
     // Matched facts become tombstones by id; free text is kept only when nothing on record matched.
     director.playerOp({ kind: 'retcon', ids: hits.map(f => f.id), texts: hits.length ? [] : [str(text, 300)] });
     return hits.length ? `Retconned: ${hits.map(f => f.fact).join(' | ').slice(0, 240)}` : 'No recorded fact matched; the narrator is told it did not happen.';

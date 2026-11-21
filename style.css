@@ -83,3 +83,8 @@
 #nd-inspector .nd-stack { display: block; font-size: 0.82em; opacity: 0.9; margin-bottom: 4px; }
 .nd-settings .nd-hint { display: block; opacity: 0.65; font-size: 0.85em; line-height: 1.25; margin-top: 1px; }
 .nd-settings .nd-tick { align-items: flex-start; margin: 6px 0; }
+
+/* Failing parts (audit, 22 Nov 2026): banner on every tab, count in the header, dot on the menu entry. */
+#nd-inspector .nd-failing { border: 1px solid #e0703a; border-radius: 6px; padding: 6px 8px; margin-bottom: 10px; background: rgba(224, 112, 58, 0.12); }
+#nd-inspector .nd-failing-count { cursor: pointer; }
+.nd-badge { margin-left: auto; min-width: 18px; padding: 0 5px; border-radius: 9px; background: #e0703a; color: #fff; font-size: 0.8em; text-align: center; }

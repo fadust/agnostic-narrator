@@ -1,4 +1,4 @@
-Narrator Director 0.2.0 (22 November 2026)
+Narrator Director 0.2.1 (22 November 2026)
 For SillyTavern 1.19.0 or newer, Chat Completion.
 
 What is in this package
@@ -19,7 +19,7 @@ Install
      When SillyTavern asks whether to allow the card's regex scripts, allow them.
   5. AI Response Configuration: import Narrator Companion.preset.json, then select it.
      If you re-import over an older copy, select the preset again so its new values apply
-     (the longest reply is now 10,000 tokens).
+     (replies are now capped at 1,500 tokens: about 500 is the target, up to 1,000 for action).
   6. Optional: Quick Replies, import Narrator Director.quickreplies.json.
   7. Extensions panel, Narrator Director: choose a connection profile for the director's own calls
      (a cheaper model is fine). With BaiBai Book installed, set "Who keeps the story's memory" to
