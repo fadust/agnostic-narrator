@@ -2,11 +2,11 @@
 // are objectives with a role, facts are weighed and fade, and a periodic clean-up merges and retires them.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { validateSpine } from '../../extension/core/planner.js';
-import { SPINE_SYSTEM, trackerPrompt } from '../../extension/core/prompts.js';
-import { FACT_FADE, factsInView, reconcile, visibleText } from '../../extension/core/state.js';
-import { hash } from '../../extension/core/util.js';
-import { validateCleanup, validateObservation, validateTracking } from '../../extension/core/validate.js';
+import { validateSpine } from '../../core/planner.js';
+import { SPINE_SYSTEM, trackerPrompt } from '../../core/prompts.js';
+import { FACT_FADE, factsInView, reconcile, visibleText } from '../../core/state.js';
+import { hash } from '../../core/util.js';
+import { validateCleanup, validateObservation, validateTracking } from '../../core/validate.js';
 import { NARRATOR, makeHost, narr, user } from './helpers.mjs';
 
 test('tracker: a failure needs a reason, "happened" needs a criterion met with it, criteria are listed apart from readings', () => {
@@ -117,7 +117,7 @@ test('a name whose parts are known separately ("Elizabeth and Dorothy Juringen")
 });
 
 test('a quote of speech without its tags matches, sentence by sentence and in order; a paraphrase still does not', async () => {
-    const { quoteMatches } = await import('../../extension/core/text.js');
+    const { quoteMatches } = await import('../../core/text.js');
     const reply = '"My father had a chest," she says. Low. Measured. "Bond notes. Letters from men with names on them. My mother burned what she could."';
     assert.ok(quoteMatches('My father had a chest. Bond notes. Letters from men with names on them.', reply));
     assert.ok(!quoteMatches('My father had a box. Bond notes. Letters from men with names on them.', reply), 'one changed word fails');

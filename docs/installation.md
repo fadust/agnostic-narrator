@@ -8,15 +8,13 @@
 
 ## 1. Install the extension
 
-1. Copy the `extension` folder into SillyTavern and name it `narrator-director`:
+1. In SillyTavern, open **Extensions → Install extension**, paste `https://github.com/fadust/agnostic-narrator` and press **Install**. SillyTavern downloads it and can update it later from the same panel.
 
-   ```
-   SillyTavern/public/scripts/extensions/third-party/narrator-director/
-   ```
-
-   `manifest.json` must sit directly in that folder.
+   Or by hand: download the release zip and copy its `narrator-director` folder to `SillyTavern/public/scripts/extensions/third-party/`. `manifest.json` must sit directly in that folder.
 2. Reload SillyTavern.
 3. Open **Extensions**. A **Narrator Director** panel should be listed.
+
+The card, preset and quick replies are not installed by the extension: download them from the release page or the `dist/` folder and import them as below.
 
 ## 2. Import the narrator card
 

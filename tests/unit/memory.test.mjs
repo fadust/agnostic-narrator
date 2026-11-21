@@ -2,13 +2,13 @@
 // get in each memory mode, and the trial fixes (outcome-style criteria, intents cut at a sentence end).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildStoryBlock } from '../../extension/core/brief.js';
-import { plannerMemory } from '../../extension/core/memory.js';
-import { validatePlan } from '../../extension/core/planner.js';
-import { PLAN_RULES, SPINE_SYSTEM, planPrompt } from '../../extension/core/prompts.js';
-import { logOp, reconcile, replay, scan, visibleText } from '../../extension/core/state.js';
-import { parseTags, stripTags } from '../../extension/core/text.js';
-import { clip, hash } from '../../extension/core/util.js';
+import { buildStoryBlock } from '../../core/brief.js';
+import { plannerMemory } from '../../core/memory.js';
+import { validatePlan } from '../../core/planner.js';
+import { PLAN_RULES, SPINE_SYSTEM, planPrompt } from '../../core/prompts.js';
+import { logOp, reconcile, replay, scan, visibleText } from '../../core/state.js';
+import { parseTags, stripTags } from '../../core/text.js';
+import { clip, hash } from '../../core/util.js';
 import { NARRATOR, makeHost, narr, user } from './helpers.mjs';
 
 const STRIP = { ...NARRATOR, strip: ['bbs_start', 'bbs_end', 'bbi_image'] };
@@ -157,7 +157,7 @@ test('an extension that is present but has summarised nothing yet is not reporte
 });
 
 test('a new character named only in part in the prose joins the cast when the full name is already known', async () => {
-    const { validateObservation } = await import('../../extension/core/validate.js');
+    const { validateObservation } = await import('../../core/validate.js');
     const text = '"Varn," she says. Not a question. She closes the ledger.';
     const intro = { cast_changes: [{ who: 'Ilse Varn', change: 'introduced', quote: '"Varn," she says.' }] };
     const base = { text, names: ['Max'], tombstones: [], present: [], uncertainIds: [], threadIds: [], clueIds: [], player: 'Max' };

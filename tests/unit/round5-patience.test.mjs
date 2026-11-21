@@ -2,10 +2,10 @@
 // re-plan when the scene stalls, refill when threads run low; timed re-plans off by default.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildBrief } from '../../extension/core/brief.js';
-import { DEFAULTS } from '../../extension/core/director.js';
-import { planTrigger } from '../../extension/core/planner.js';
-import { initialState } from '../../extension/core/state.js';
+import { buildBrief } from '../../core/brief.js';
+import { DEFAULTS } from '../../core/director.js';
+import { planTrigger } from '../../core/planner.js';
+import { initialState } from '../../core/state.js';
 import { fakeObserver, makeHost, narr, replyOf, user } from './helpers.mjs';
 
 function playing(mode, extra = {}) {
@@ -110,7 +110,7 @@ test('a bare re-plan reaches the planner but never the narrator\'s notes', () =>
 });
 
 test('an unchanged location and minor background events are not "something new" (live, 19 Nov 2026)', async () => {
-    const { applyDelta } = await import('../../extension/core/state.js');
+    const { applyDelta } = await import('../../core/state.js');
     const s = initialState({ player: 'Max' });
     s.scene.location = { value: 'the Hare and Hearth', established: true };
     const obs = (delta) => ({ delta: { summary: '', scene: {}, facts: [], confirmed: [], beliefs: [], relationships: [], stats: [], statuses: [], cast_changes: [], threads: [], lore: [], contradictions: [], direction: { beat: 'untouched', clues_found: [] }, ...delta }, accepted: 1, rejected: [] });

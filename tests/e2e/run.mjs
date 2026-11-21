@@ -33,7 +33,8 @@ const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
 // ---------------------------------------------------------------- boot
 const extDir = join(ST, 'public/scripts/extensions/third-party/narrator-director');
 rmSync(extDir, { recursive: true, force: true });
-cpSync(join(root, 'extension'), extDir, { recursive: true });
+// The extension lives at the repo root (so SillyTavern can install it from the GitHub URL); copy only its own files.
+for (const f of ['index.js', 'manifest.json', 'style.css', 'core', 'st']) cpSync(join(root, f), join(extDir, f), { recursive: true });
 const dataRoot = mkdtempSync(join(tmpdir(), 'nd-e2e-'));
 const mock = await startMock(MOCK);
 const env = { ...process.env, NO_PROXY: '127.0.0.1,localhost', no_proxy: '127.0.0.1,localhost' };

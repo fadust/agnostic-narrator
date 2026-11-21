@@ -3,10 +3,11 @@
 ## Layout
 
 ```
-extension/          the SillyTavern extension (copied as-is; no build step)
-  index.js          the only file that imports from SillyTavern
-  st/ui.js          settings panel and inspector
-  core/             plain ES modules with no SillyTavern imports; run in Node
+manifest.json       the SillyTavern extension sits at the repo root, so it installs from the GitHub URL
+index.js            the only file that imports from SillyTavern
+style.css
+st/ui.js            settings panel and inspector
+core/               plain ES modules with no SillyTavern imports; run in Node
 card/               sources for everything in dist/
   src/description.md    the narrator card's rules
   src/preset.md         the companion preset's main prompt
@@ -21,7 +22,7 @@ tests/e2e/          checks against a real SillyTavern with a mock LLM
 docs/               documentation
 ```
 
-The split matters. Everything with a rule in it lives in `extension/core/` and is tested in Node. `index.js` connects that core to SillyTavern's events, prompt slots and World Info, and holds as little logic as possible.
+The split matters. Everything with a rule in it lives in `core/` and is tested in Node. `index.js` connects that core to SillyTavern's events, prompt slots and World Info, and holds as little logic as possible.
 
 ## Commands
 
@@ -48,7 +49,7 @@ ST_DIR=/path/to/SillyTavern npm run e2e
 | `npm run docs` | Rebuilds `docs/rules.md` only | Node |
 | `npm run e2e` | Starts SillyTavern on a throwaway data folder with a mock LLM and runs the end-to-end checks | A SillyTavern checkout with `npm install` done, and Playwright with Chromium |
 
-The end-to-end run copies `extension/` into the SillyTavern checkout, takes about four minutes, and removes its data folder afterwards. Set `SHOTS_DIR` to save screenshots, and `VERBOSE=1` for the browser console.
+The end-to-end run copies the extension's files (`index.js`, `manifest.json`, `style.css`, `core/`, `st/`) into the SillyTavern checkout, takes about four minutes, and removes its data folder afterwards. Set `SHOTS_DIR` to save screenshots, and `VERBOSE=1` for the browser console.
 
 ## Changing a rule
 
@@ -59,7 +60,7 @@ The rules the models read live in four places:
 | Narrator card | `card/src/description.md` | `npm run build`, re-import the card |
 | Craft entries | `CRAFT` in `card/build.mjs` | `npm run build`, re-import the card |
 | Companion preset | `card/src/preset.md` | `npm run build`, re-import the preset |
-| Observer, planner and other director prompts | `extension/core/prompts.js` | `npm run docs`, reload the extension |
+| Observer, planner and other director prompts | `core/prompts.js` | `npm run docs`, reload the extension |
 
 `npm test` fails if `docs/rules.md` no longer matches the sources, so a rule cannot change without the document changing.
 
@@ -68,7 +69,7 @@ When a note line is added or renamed in `brief.js`, explain it in the card. An u
 ## Adding a craft entry
 
 1. Add a row to `CRAFT` in `card/build.mjs`: a flag, a name and the text.
-2. For a genre, add the label to `GENRES` in `extension/core/enums.js`, and any synonyms to `GENRE_ALIASES`. The flag is `nar_genre_` plus the label with underscores.
+2. For a genre, add the label to `GENRES` in `core/enums.js`, and any synonyms to `GENRE_ALIASES`. The flag is `nar_genre_` plus the label with underscores.
 3. `npm run build` and re-import the card.
 
 ## The fixture suite

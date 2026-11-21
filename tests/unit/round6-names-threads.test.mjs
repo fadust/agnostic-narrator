@@ -1,10 +1,10 @@
 // Round 6 (19 November 2026): names already taken (M3) and dormant threads (F1).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildStoryBlock, takenNames } from '../../extension/core/brief.js';
-import { awakeThreads, initialState, threadKeys } from '../../extension/core/state.js';
-import { planTrigger } from '../../extension/core/planner.js';
-import { DEFAULTS } from '../../extension/core/director.js';
+import { buildStoryBlock, takenNames } from '../../core/brief.js';
+import { awakeThreads, initialState, threadKeys } from '../../core/state.js';
+import { planTrigger } from '../../core/planner.js';
+import { DEFAULTS } from '../../core/director.js';
 
 test('names already in use: cast, player, renamed-away names, proper-name lore keys and lore characters', () => {
     const s = initialState({ player: 'Max' });

@@ -2,11 +2,11 @@
 // Records are written directly, so these tests do not depend on the observer's validator.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildStoryBlock } from '../../extension/core/brief.js';
-import { chapters, leadingEnding, needsConclusion, needsNewEnding, spineForObserver, spineIds, spineState, spineTrigger } from '../../extension/core/spine.js';
-import { logOp, reconcile, replay, visibleText } from '../../extension/core/state.js';
-import { hash } from '../../extension/core/util.js';
-import { CONCLUSION_SYSTEM, SPINE_SYSTEM } from '../../extension/core/prompts.js';
+import { buildStoryBlock } from '../../core/brief.js';
+import { chapters, leadingEnding, needsConclusion, needsNewEnding, spineForObserver, spineIds, spineState, spineTrigger } from '../../core/spine.js';
+import { logOp, reconcile, replay, visibleText } from '../../core/state.js';
+import { hash } from '../../core/util.js';
+import { CONCLUSION_SYSTEM, SPINE_SYSTEM } from '../../core/prompts.js';
 import { NARRATOR, makeHost, narr, user } from './helpers.mjs';
 
 const SPINE = {

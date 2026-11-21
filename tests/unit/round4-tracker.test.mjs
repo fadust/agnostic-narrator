@@ -2,9 +2,9 @@
 // speaker on every quote, checked against the cast and the text around the quote.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { trackerPrompt } from '../../extension/core/prompts.js';
-import { applySpineDelta, isLasting } from '../../extension/core/spine.js';
-import { speakerCheck, validateTracking } from '../../extension/core/validate.js';
+import { trackerPrompt } from '../../core/prompts.js';
+import { applySpineDelta, isLasting } from '../../core/spine.js';
+import { speakerCheck, validateTracking } from '../../core/validate.js';
 
 const SPINE = { endingIds: ['e1'], criterionIds: ['e1-c1', 'm1-c1', 'm1-c2'], milestoneIds: ['m1'], milestoneCriteria: { m1: ['m1-c1', 'm1-c2'] }, lastingIds: ['m1-c2'] };
 const T1 = '"I stood at twelve for the mother," Corliss says. Elizabeth says nothing. Dorothy lets him take her arm.';
@@ -63,7 +63,7 @@ test('the speaker is kept only when it is a known name found at the quote, or "y
 });
 
 test('the conclusion writer gets each quote with its speaker, and is told not to guess one', async () => {
-    const { CONCLUSION_SYSTEM, conclusionPrompt } = await import('../../extension/core/prompts.js');
+    const { CONCLUSION_SYSTEM, conclusionPrompt } = await import('../../core/prompts.js');
     const milestone = { title: 'First Ally', criteria: [{ text: 'Max learns who backs the auction', mark: 'met', quote: 'I stood at twelve for the mother', speaker: 'Corliss' }, { text: 'Elizabeth speaks to him', mark: 'met', quote: 'My husband owed' }], happened: { quote: 'My husband owed', speaker: 'Elizabeth Juringen' } };
     const u = conclusionPrompt({ milestone, player: 'Max', genre: {} })[1].content;
     assert.match(u, /\(narration, Corliss: "I stood at twelve for the mother"\)/);

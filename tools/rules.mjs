@@ -6,8 +6,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { CAPS } from '../extension/core/enums.js';
-import { CONCLUSION_SYSTEM, OBSERVER_SYSTEM, PLAN_RULES, SPINE_SYSTEM, TRACKER_SYSTEM } from '../extension/core/prompts.js';
+import { CAPS } from '../core/enums.js';
+import { CONCLUSION_SYSTEM, OBSERVER_SYSTEM, PLAN_RULES, SPINE_SYSTEM, TRACKER_SYSTEM } from '../core/prompts.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(join(root, p), 'utf8');
@@ -51,7 +51,7 @@ ${quote(read('card/src/preset.md'))}
 
 ## 4. Observer
 
-Source: \`extension/core/prompts.js\`. One call after every narrator reply. It records what the reply states and flags contradictions.
+Source: \`core/prompts.js\`. One call after every narrator reply. It records what the reply states and flags contradictions.
 
 ${quote(observerRules)}
 >
@@ -65,7 +65,7 @@ ${quote(TRACKER_SYSTEM.slice(0, TRACKER_SYSTEM.indexOf(JSON_ONLY_MARK)).trim())}
 
 ## 5. Planner
 
-Source: \`extension/core/prompts.js\`. Runs when a re-plan is triggered.
+Source: \`core/prompts.js\`. Runs when a re-plan is triggered.
 
 ${quote(PLAN_RULES.replace('Planning rules:\n', ''))}
 
@@ -83,7 +83,7 @@ ${quote(CONCLUSION_SYSTEM)}
 
 ## 6. Enforced in code
 
-Source: \`extension/core/\`. No prompt can override these.
+Source: \`core/\`. No prompt can override these.
 
 | Rule | How it is enforced |
 | --- | --- |

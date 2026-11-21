@@ -1,10 +1,10 @@
 // Round 4: the observer names a fact's kind from a fixed list; code decides the weight.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { FACT_KINDS } from '../../extension/core/enums.js';
-import { OBSERVER_SYSTEM } from '../../extension/core/prompts.js';
-import { applyDelta, initialState } from '../../extension/core/state.js';
-import { validateObservation } from '../../extension/core/validate.js';
+import { FACT_KINDS } from '../../core/enums.js';
+import { OBSERVER_SYSTEM } from '../../core/prompts.js';
+import { applyDelta, initialState } from '../../core/state.js';
+import { validateObservation } from '../../core/validate.js';
 
 const TEXT = 'Sithe is her brother. Ilse glances at the door. Rain drums on the roof. The barman spills the ale. Max owes Ilse ten crowns.';
 const CTX = { text: TEXT, names: ['Max', 'Ilse'], tombstones: [], present: [], uncertainIds: [], threadIds: [], clueIds: [], player: 'Max' };

@@ -3,10 +3,10 @@
 // transforms one) changed by the planner, edited on the Cast tab, shown to the narrator while the character is present.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { agendaLines, agendaName, applyPlanAgendas, cleanWants, seedCandidates, validateAgendas, validateRenewals, wantOf } from '../../extension/core/agenda.js';
-import { buildBrief } from '../../extension/core/brief.js';
-import { planPrompt, spinePrompt } from '../../extension/core/prompts.js';
-import { applyOp, ensureCast, initialState } from '../../extension/core/state.js';
+import { agendaLines, agendaName, applyPlanAgendas, cleanWants, seedCandidates, validateAgendas, validateRenewals, wantOf } from '../../core/agenda.js';
+import { buildBrief } from '../../core/brief.js';
+import { planPrompt, spinePrompt } from '../../core/prompts.js';
+import { applyOp, ensureCast, initialState } from '../../core/state.js';
 
 const castState = () => {
     const s = initialState({ player: 'Max' });
@@ -94,7 +94,7 @@ test('prompts: the planner\'s system text stays fixed; wants and seed candidates
 });
 
 test('live fixes: wants survive the notes cap longest; a cut-off outcome is dropped (19 Nov 2026)', async () => {
-    const { validatePlan } = await import('../../extension/core/planner.js');
+    const { validatePlan } = await import('../../core/planner.js');
     const s = castState();
     s.agendas = { Piet: { wants: ['to be paid'] } };
     s.meta.turn = 2;

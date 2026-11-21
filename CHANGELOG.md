@@ -2,6 +2,10 @@
 
 Newest first. Each entry says which parts changed, so you know what to re-import.
 
+## Installs from GitHub
+
+*Extension only, no behaviour change.* The extension's files now sit at the repo root, so SillyTavern's **Install extension** takes `https://github.com/fadust/agnostic-narrator` directly. A copy installed by hand keeps working; to switch, remove the old `narrator-director` folder and install from the URL.
+
 ## Bounded retries after empty answers; every character gets stats; stats grow and decline
 
 *Extension and card.* Re-import the card, or replace `Narrator.png` in place: it asks for build and occupation when a character first appears.

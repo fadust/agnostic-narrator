@@ -1,7 +1,7 @@
 // Round 5, W5: a later milestone concludes while an earlier one is open -> the earlier one is skipped.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { applySpineOp, chapters, mergeSpineEdit, needsConclusion, spineForObserver, spineForPlanner } from '../../extension/core/spine.js';
+import { applySpineOp, chapters, mergeSpineEdit, needsConclusion, spineForObserver, spineForPlanner } from '../../core/spine.js';
 
 const crit = (id) => ({ id, text: id, mark: 'open' });
 const fresh = () => ({

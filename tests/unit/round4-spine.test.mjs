@@ -2,9 +2,9 @@
 // player-led, gesture, tally and scene-bound criteria, and one cheap check call rewrites only those before logging.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { validateSpine, validateSpineRewrites } from '../../extension/core/planner.js';
-import { SPINE_SYSTEM, spineCheckPrompt, spinePrompt } from '../../extension/core/prompts.js';
-import { applySpineRewrites, flagSpine } from '../../extension/core/spine.js';
+import { validateSpine, validateSpineRewrites } from '../../core/planner.js';
+import { SPINE_SYSTEM, spineCheckPrompt, spinePrompt } from '../../core/prompts.js';
+import { applySpineRewrites, flagSpine } from '../../core/spine.js';
 import { makeHost, narr, user } from './helpers.mjs';
 
 const MATERIAL = '[Scenario]\nThe king and queen were murdered; the prince now serves a noble house as a hired hand.';
@@ -104,7 +104,7 @@ test('a failed check call still logs the original draft', async () => {
 });
 
 test('a rewrite that still trips its flag is refused and the original stays', async () => {
-    const { validateSpineRewrites } = await import('../../extension/core/planner.js');
+    const { validateSpineRewrites } = await import('../../core/planner.js');
     const spine = { endings: [{ id: 'e1', title: 'Road', criteria: [{ id: 'e1-c1', text: 'Max has given up his horse for the women', mark: 'open' }, { id: 'e1-c2', text: 'Max nods at the bailiff', mark: 'open' }] }], milestones: [] };
     const flags = [{ id: 'e1-c1', reason: 'player' }, { id: 'e1-c2', reason: 'player' }];
     const v = validateSpineRewrites({ rewrites: [
@@ -116,7 +116,7 @@ test('a rewrite that still trips its flag is refused and the original stays', as
 });
 
 test('the player character\'s situation is not flagged, only his actions', async () => {
-    const { flagSpine } = await import('../../extension/core/spine.js');
+    const { flagSpine } = await import('../../core/spine.js');
     const crit = (id, text) => ({ id, text, mark: 'open' });
     const spine = { endings: [{ id: 'e1', title: 'T', criteria: [
         crit('e1-c1', 'Max possesses enough coin or a written promise of credit to buy the cart'),

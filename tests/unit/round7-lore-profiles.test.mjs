@@ -2,8 +2,8 @@
 // introduced by the story but never got starting stats, because only character cards and the persona were profiled.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { loreCards } from '../../extension/core/director.js';
-import { initialState } from '../../extension/core/state.js';
+import { loreCards } from '../../core/director.js';
+import { initialState } from '../../core/state.js';
 import { fakeObserver, makeHost, narr, replyOf, user } from './helpers.mjs';
 
 const JANUS = 'Janus is an 18-year-old member of Max\'s household, quick, light-footed and shameless.';
@@ -88,15 +88,15 @@ test('a story-only character is profiled once from what the story has shown of t
 });
 
 test('the profile prompt ties stats to build, occupation, background and age', async () => {
-    const { profilePrompt } = await import('../../extension/core/prompts.js');
+    const { profilePrompt } = await import('../../core/prompts.js');
     const sys = profilePrompt({ name: 'X', card: 'X is a smith.', genre: { dominant: 'fantasy' } })[0].content;
     for (const k of ['Build:', 'Occupation', 'Background', 'Age:', 'stays at 30']) assert.ok(sys.includes(k), k);
     assert.equal(sys, profilePrompt({ name: 'Y', card: 'notes', genre: { dominant: 'noir' }, story: true })[0].content, 'system text is the same for every call (cacheable)');
 });
 
 test('stats grow and decline with the story: small steps for practice or disuse, large for a decisive event', async () => {
-    const { applyDelta } = await import('../../extension/core/state.js');
-    const { validateObservation } = await import('../../extension/core/validate.js');
+    const { applyDelta } = await import('../../core/state.js');
+    const { validateObservation } = await import('../../core/validate.js');
     const s = initialState({ player: 'Max' });
     s.cast.Janus = { ...s.cast.Janus, stats: { strength: 40, agility: 70, endurance: 35, intellect: 30, perception: 50, will: 30, presence: 40 } };
     const text = 'Janus drills the sword forms until dawn. The blade takes his left hand at the wrist.';

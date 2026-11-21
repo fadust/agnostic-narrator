@@ -161,18 +161,18 @@ Nothing else is stored. State is rebuilt from the messages each time it is neede
 
 | Path | Contents |
 | --- | --- |
-| `extension/index.js` | The only file that touches SillyTavern: events, prompts, World Info, groups, commands |
-| `extension/st/ui.js` | Settings panel and inspector |
-| `extension/core/state.js` | Records, reconciliation, replay |
-| `extension/core/validate.js` | Checks everything the observer proposes |
-| `extension/core/director.js` | The pipeline: observe, profile, plan, roll up |
-| `extension/core/brief.js` | Composes the notes and the story block |
-| `extension/core/social.js` | Turns abilities and relationships into words; attempt tiers |
-| `extension/core/planner.js` | Validates profiles, arcs and plans; the rating; re-plan triggers |
-| `extension/core/lore.js` | Derives the dynamic lorebook |
-| `extension/core/prompts.js` | Every prompt the director sends |
-| `extension/core/vars.js` | Public variables |
-| `extension/core/text.js`, `json.js`, `util.js`, `enums.js` | Quote matching and leak stripping, JSON recovery, helpers, allowed values |
+| `index.js` | The only file that touches SillyTavern: events, prompts, World Info, groups, commands |
+| `st/ui.js` | Settings panel and inspector |
+| `core/state.js` | Records, reconciliation, replay |
+| `core/validate.js` | Checks everything the observer proposes |
+| `core/director.js` | The pipeline: observe, profile, plan, roll up |
+| `core/brief.js` | Composes the notes and the story block |
+| `core/social.js` | Turns abilities and relationships into words; attempt tiers |
+| `core/planner.js` | Validates profiles, arcs and plans; the rating; re-plan triggers |
+| `core/lore.js` | Derives the dynamic lorebook |
+| `core/prompts.js` | Every prompt the director sends |
+| `core/vars.js` | Public variables |
+| `core/text.js`, `json.js`, `util.js`, `enums.js` | Quote matching and leak stripping, JSON recovery, helpers, allowed values |
 | `card/src/description.md` | The narrator card's rules |
 | `card/src/preset.md` | The companion preset's main prompt |
 | `card/build.mjs` | Builds `dist/`; holds the craft entries |

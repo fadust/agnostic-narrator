@@ -4,7 +4,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LEAK_PATTERNS } from '../extension/core/text.js';
+import { LEAK_PATTERNS } from '../core/text.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');

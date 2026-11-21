@@ -1,13 +1,13 @@
 // Round 4 (I5): cacheable system prompts, per-module cost totals, early fact clean-up.
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { validateSpine } from '../../extension/core/planner.js';
+import { validateSpine } from '../../core/planner.js';
 import {
     arcPrompt, cleanupPrompt, conclusionPrompt, genrePrompt, observerPrompt, planPrompt, profilePrompt, spinePrompt, summariserPrompt, trackerPrompt,
-} from '../../extension/core/prompts.js';
-import { emptySpine } from '../../extension/core/spine.js';
-import { ensureCast, initialState } from '../../extension/core/state.js';
-import { roughTokens } from '../../extension/core/util.js';
+} from '../../core/prompts.js';
+import { emptySpine } from '../../core/spine.js';
+import { ensureCast, initialState } from '../../core/state.js';
+import { roughTokens } from '../../core/util.js';
 import { makeHost, narr, user } from './helpers.mjs';
 
 function bareState() {

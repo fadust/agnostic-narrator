@@ -15,7 +15,7 @@ Built and tested against SillyTavern 1.19.0. No other extension is required.
 
 ## Quick start
 
-1. Copy `extension/` to `SillyTavern/public/scripts/extensions/third-party/narrator-director/` and reload.
+1. In SillyTavern, open **Extensions → Install extension**, paste `https://github.com/fadust/agnostic-narrator` and install.
 2. Import `dist/Narrator.card.json` as a character and allow its regex scripts.
 3. Import `dist/Narrator Companion.preset.json` and select it.
 4. Open a chat with the Narrator and say where the story begins.
@@ -43,7 +43,7 @@ Full steps, including a separate model for the director: [docs/installation.md](
 
 | Part | Path | Purpose |
 | --- | --- | --- |
-| Director extension | `extension/` | Record, memory, continuity, planning, notes, dynamic lore, inspector, `/director` |
+| Director extension | repo root (`manifest.json`, `index.js`, `core/`, `st/`) | Record, memory, continuity, planning, notes, dynamic lore, inspector, `/director` |
 | Narrator card | `dist/Narrator.card.json` | Identity and rules, craft entries, regex scripts that strip leaked notes |
 | Companion preset | `dist/Narrator Companion.preset.json` | Content stance and prose craft; follows the story's rating |
 | Quick replies | `dist/Narrator Director.quickreplies.json` | Buttons for common commands |

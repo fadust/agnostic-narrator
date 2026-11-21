@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { validateConclusion, validatePlan, validateSpine } from '../../extension/core/planner.js';
-import { TRACKER_SYSTEM, conclusionPrompt, observerPrompt, planPrompt, spinePrompt, trackerPrompt } from '../../extension/core/prompts.js';
-import { emptySpine, spineIds } from '../../extension/core/spine.js';
-import { initialState } from '../../extension/core/state.js';
-import { validateObservation, validateTracking } from '../../extension/core/validate.js';
+import { validateConclusion, validatePlan, validateSpine } from '../../core/planner.js';
+import { TRACKER_SYSTEM, conclusionPrompt, observerPrompt, planPrompt, spinePrompt, trackerPrompt } from '../../core/prompts.js';
+import { emptySpine, spineIds } from '../../core/spine.js';
+import { initialState } from '../../core/state.js';
+import { validateObservation, validateTracking } from '../../core/validate.js';
 
 const draft = {
     question: 'Can the fallen prince take back what was stolen?',

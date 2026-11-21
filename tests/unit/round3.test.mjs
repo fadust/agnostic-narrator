@@ -3,10 +3,10 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { test } from 'node:test';
-import { buildStoryBlock } from '../../extension/core/brief.js';
-import { CONCLUSION_SYSTEM, conclusionPrompt } from '../../extension/core/prompts.js';
-import { logOp, reconcile, replay, visibleText } from '../../extension/core/state.js';
-import { hash } from '../../extension/core/util.js';
+import { buildStoryBlock } from '../../core/brief.js';
+import { CONCLUSION_SYSTEM, conclusionPrompt } from '../../core/prompts.js';
+import { logOp, reconcile, replay, visibleText } from '../../core/state.js';
+import { hash } from '../../core/util.js';
 import { NARRATOR, narr, user } from './helpers.mjs';
 
 function chatWithSummaries() {
@@ -54,20 +54,20 @@ test('a planned off-screen outcome is weighed major, also once confirmed', () =>
 });
 
 test('a stray closing tag is removed without gluing the paragraphs around it', async () => {
-    const { stripDirector } = await import('../../extension/core/text.js');
+    const { stripDirector } = await import('../../core/text.js');
     assert.equal(stripDirector('Prose one.</director_notes>\nProse two.'), 'Prose one.\nProse two.');
     assert.equal(stripDirector('Prose one. </director_notes>   Prose two.'), 'Prose one. Prose two.');
 });
 
 test('BaiBai Book item and variable blocks are removed before the director reads a reply', async () => {
-    const { stripTags, parseTags } = await import('../../extension/core/text.js');
+    const { stripTags, parseTags } = await import('../../core/text.js');
     const tags = parseTags('bbs_start, bbs_end, bbs_items, bbs_vars, bbi_image');
     const reply = '<bbs_start>1420/4/12 09:43</bbs_start>\n\nHe slides the writ across.\n<bbs_items>\nGained Amended forfeit writ 1\n</bbs_items>\n<bbs_vars>\nSet trust 2\n</bbs_vars>';
     assert.equal(stripTags(reply, tags), 'He slides the writ across.');
 });
 
 test('adding tags to the strip list keeps records read with the earlier list', async () => {
-    const { scan } = await import('../../extension/core/state.js');
+    const { scan } = await import('../../core/state.js');
     const before = { ...NARRATOR, strip: ['bbs_start', 'bbs_end', 'bbi_image'] };
     const after = { ...NARRATOR, strip: ['bbs_start', 'bbs_end', 'bbs_items', 'bbs_vars', 'bbi_image'] };
     const chat = [user('go'), narr('<bbs_start>t</bbs_start>\nHe slides the writ across.\n<bbs_items>\nGained writ 1\n</bbs_items>'), user('next'), narr('Another reply.')];

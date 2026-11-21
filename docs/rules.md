@@ -186,7 +186,7 @@ Source: `card/src/preset.md`. The main prompt of `dist/Narrator Companion.preset
 
 ## 4. Observer
 
-Source: `extension/core/prompts.js`. One call after every narrator reply. It records what the reply states and flags contradictions.
+Source: `core/prompts.js`. One call after every narrator reply. It records what the reply states and flags contradictions.
 
 > Rules:
 > 1. Record only what the REPLY itself narrates. Never record something because the notes asked for it, because the player attempted it, or because it seems likely.
@@ -224,7 +224,7 @@ A separate call after each reply, only once the story has a spine. It reads the 
 
 ## 5. Planner
 
-Source: `extension/core/prompts.js`. Runs when a re-plan is triggered.
+Source: `core/prompts.js`. Runs when a re-plan is triggered.
 
 > - Plan possibilities, not a script. The plan is a ride the player may jump on or not. A beat is an opening the world offers, with a precondition ("if the player enters the city, the moneylender's men are watching the gate"), never an event that happens regardless of what the player does. Passing an opening by is a valid choice, never something to correct. Never decide the player character's actions, words or feelings.
 > - The player's choices come first. If the story has moved away from the old plan, follow the story.
@@ -301,7 +301,7 @@ Runs when a milestone's checklist is fully resolved. Its text replaces the check
 
 ## 6. Enforced in code
 
-Source: `extension/core/`. No prompt can override these.
+Source: `core/`. No prompt can override these.
 
 | Rule | How it is enforced |
 | --- | --- |

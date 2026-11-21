@@ -1,16 +1,16 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildBrief, buildStoryBlock } from '../../extension/core/brief.js';
-import { extractJson } from '../../extension/core/json.js';
-import { applyRating, rotate, validateArc, validateGenre, validatePlan, validateProfile } from '../../extension/core/planner.js';
-import { splitByCast, summaryView } from '../../extension/core/record.js';
-import { detectAttempt } from '../../extension/core/social.js';
-import { buildLorebook } from '../../extension/core/lore.js';
-import { bandOf, ensureCast, initialState, logOp, reconcile, replay } from '../../extension/core/state.js';
-import { planPrompt } from '../../extension/core/prompts.js';
-import { quoteMatches, stripDirector } from '../../extension/core/text.js';
-import { validateObservation } from '../../extension/core/validate.js';
-import { publicVars, writeVars } from '../../extension/core/vars.js';
+import { buildBrief, buildStoryBlock } from '../../core/brief.js';
+import { extractJson } from '../../core/json.js';
+import { applyRating, rotate, validateArc, validateGenre, validatePlan, validateProfile } from '../../core/planner.js';
+import { splitByCast, summaryView } from '../../core/record.js';
+import { detectAttempt } from '../../core/social.js';
+import { buildLorebook } from '../../core/lore.js';
+import { bandOf, ensureCast, initialState, logOp, reconcile, replay } from '../../core/state.js';
+import { planPrompt } from '../../core/prompts.js';
+import { quoteMatches, stripDirector } from '../../core/text.js';
+import { validateObservation } from '../../core/validate.js';
+import { publicVars, writeVars } from '../../core/vars.js';
 import { NARRATOR, fakeObserver, makeHost, narr, replyOf, user } from './helpers.mjs';
 
 const ctx = { narrator: NARRATOR, setup: { player: 'Rowan', genre: { dominant: 'fantasy' } } };

@@ -1,9 +1,9 @@
 // Round 5 (18 November 2026): the observer goes first in a profile's queue (W0), and a second check before "met" (W4).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { Director } from '../../extension/core/director.js';
-import { trackCheckPrompt } from '../../extension/core/prompts.js';
-import { applyTrackCheck, aroundQuote, validateTrackCheck } from '../../extension/core/validate.js';
+import { Director } from '../../core/director.js';
+import { trackCheckPrompt } from '../../core/prompts.js';
+import { applyTrackCheck, aroundQuote, validateTrackCheck } from '../../core/validate.js';
 import { NARRATOR } from './helpers.mjs';
 
 function hostWith(call, settings = {}) {

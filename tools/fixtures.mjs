@@ -11,13 +11,13 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { buildBrief } from '../extension/core/brief.js';
-import { extractJson } from '../extension/core/json.js';
-import { validateArc, validateGenre, validatePlan, validateProfile } from '../extension/core/planner.js';
-import { arcPrompt, genrePrompt, observerPrompt, planPrompt, profilePrompt } from '../extension/core/prompts.js';
-import { ensureCast, initialState } from '../extension/core/state.js';
-import { validateObservation } from '../extension/core/validate.js';
-import { getPath } from '../extension/core/util.js';
+import { buildBrief } from '../core/brief.js';
+import { extractJson } from '../core/json.js';
+import { validateArc, validateGenre, validatePlan, validateProfile } from '../core/planner.js';
+import { arcPrompt, genrePrompt, observerPrompt, planPrompt, profilePrompt } from '../core/prompts.js';
+import { ensureCast, initialState } from '../core/state.js';
+import { validateObservation } from '../core/validate.js';
+import { getPath } from '../core/util.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const load = (f) => JSON.parse(readFileSync(join(root, 'fixtures', f), 'utf8'));

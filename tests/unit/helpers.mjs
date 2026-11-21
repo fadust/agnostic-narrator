@@ -1,4 +1,4 @@
-import { Director } from '../../extension/core/director.js';
+import { Director } from '../../core/director.js';
 
 export const NARRATOR = { name: 'Narrator', avatar: 'narrator.png', group: false };
 

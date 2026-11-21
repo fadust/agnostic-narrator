@@ -1,13 +1,13 @@
 // Round 5, W1 (beats as openings: goal and pressure) and W3 (the plan check).
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildBrief } from '../../extension/core/brief.js';
+import { buildBrief } from '../../core/brief.js';
 import {
     checkPlan, copiedCriterion, fightsGenre, hollowChoice, nameClash, pastPrecondition, reviewPlan, scriptsPlayer, settlePlan, validatePlanRewrites,
-} from '../../extension/core/plancheck.js';
-import { validatePlan } from '../../extension/core/planner.js';
-import { observerPrompt, planCheckPrompt, planPrompt } from '../../extension/core/prompts.js';
-import { initialState, logOp, reconcile, replay } from '../../extension/core/state.js';
+} from '../../core/plancheck.js';
+import { validatePlan } from '../../core/planner.js';
+import { observerPrompt, planCheckPrompt, planPrompt } from '../../core/prompts.js';
+import { initialState, logOp, reconcile, replay } from '../../core/state.js';
 import { NARRATOR, defaultScript, makeHost, narr, user } from './helpers.mjs';
 
 const ctxOf = (over = {}) => ({ player: 'Max Brenner', criteria: [], names: ['Elsa', 'Piet', 'Max Brenner'], knownText: '', genre: { lethality: 'real', avoid: [] }, time: '', beatLog: [], ...over });
@@ -165,7 +165,7 @@ test('W3 in the director: a clean plan makes no check call', async () => {
 });
 
 test('scripts the player anywhere in the text, and when his body or clothes are changed (live, 18 Nov 2026)', async () => {
-    const { scriptsPlayer: s } = await import('../../extension/core/plancheck.js');
+    const { scriptsPlayer: s } = await import('../../core/plancheck.js');
     const P = 'Max Brenner';
     assert.equal(s("The fire throws enough light to see by, and Max's collar has come loose in the warmth.", P), true);
     assert.equal(s("A glimpse of the scar over Max's ribs is offered to the woman.", P), true);
@@ -175,8 +175,8 @@ test('scripts the player anywhere in the text, and when his body or clothes are 
 });
 
 test('the arc and spine are built on the player character\'s aim from the opening move (owner, 19 Nov 2026)', async () => {
-    const { arcPrompt, spinePrompt } = await import('../../extension/core/prompts.js');
-    const { initialState } = await import('../../extension/core/state.js');
+    const { arcPrompt, spinePrompt } = await import('../../core/prompts.js');
+    const { initialState } = await import('../../core/state.js');
     const s = initialState({ player: 'Max' });
     s.genre = { dominant: 'drama' };
     const arc = arcPrompt({ state: s, loreKeys: [], opening: 'Max rides into Veldmark looking for news of the Juringen sisters.' });
@@ -187,7 +187,7 @@ test('the arc and spine are built on the player character\'s aim from the openin
 });
 
 test('an avoid item that is a style note is not touched by sharing a word or a name with it (live, 19 Nov 2026)', async () => {
-    const { fightsGenre } = await import('../../extension/core/plancheck.js');
+    const { fightsGenre } = await import('../../core/plancheck.js');
     const genre = { lethality: 'high', avoid: ['rushing past the inn and its watchful regulars', 'letting Max solve everything without friction', 'gore'] };
     assert.equal(fightsGenre('The north road past the tannery bend is walkable tonight, and the inn regulars are still at their benches.', genre, ['Max']), '');
     assert.equal(fightsGenre('Max can leave the inn tonight or stay.', genre, ['Max']), '');
